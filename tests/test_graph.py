@@ -26,6 +26,15 @@ def test_first_row_of_line_does_not_link_to_previous_line():
     assert _edges(g, ("시청", 2)) == {("을지로입구", 2): 90}
 
 
+def test_real_graph_branch_heads_and_alias_attach():
+    # 연결만 보는 테스트는 BRANCH_HEADS·ALIASES를 비워도 통과한다. 이웃을 정확히 고정한다
+    g = build_graph(load_rows())
+    assert _edges(g, ("용답", 2)) == {("성수", 2): 180, ("신답", 2): 90}
+    assert _edges(g, ("도림천", 2)) == {("신도림", 2): 90, ("양천구청", 2): 150}
+    assert _edges(g, ("이수", 4))[("이수", 7)] == TRANSFER_SECONDS
+    assert ("총신대입구", 4) not in g
+
+
 def test_real_graph_is_connected():
     g = build_graph(load_rows())
     seen, stack = {("서울역", 1)}, [("서울역", 1)]
