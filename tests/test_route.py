@@ -36,6 +36,14 @@ def test_q2_needs_transfer():
     assert r.transfers >= 1
 
 
+def test_circular_lines_close_on_repeated_station():
+    # 2호선은 시청이 두 번, 6호선 응암순환은 응암이 두 번 나와서 고리가 닫힌다
+    assert shortest(REAL, "충정로", "시청", max_transfers=0).seconds == 90
+    assert shortest(REAL, "구산", "새절", max_transfers=0).nodes == [
+        ("구산", 6), ("응암", 6), ("새절", 6)
+    ]
+
+
 def test_eungam_loop_is_one_way():
     # 응암순환은 응암→역촌→불광→독바위→연신내→구산→응암 한 방향만 달린다
     # 역촌→구산: 응암을 거치는 역방향(220초)이 아니라 불광·독바위·연신내를 도는 370초
