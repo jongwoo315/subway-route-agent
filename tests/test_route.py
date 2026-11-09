@@ -36,5 +36,13 @@ def test_q2_needs_transfer():
     assert r.transfers >= 1
 
 
+def test_eungam_loop_is_one_way():
+    # 응암순환은 응암→역촌→불광→독바위→연신내→구산→응암 한 방향만 달린다
+    # 역촌→구산: 응암을 거치는 역방향(220초)이 아니라 불광·독바위·연신내를 도는 370초
+    assert shortest(REAL, "역촌", "구산", max_transfers=0).seconds == 370
+    # 연신내→역촌: 구산·응암을 거쳐 300초
+    assert shortest(REAL, "연신내", "역촌", max_transfers=0).seconds == 300
+
+
 def test_unknown_destination_returns_none_without_cap():
     assert shortest(REAL, "강남", "없는역") is None
