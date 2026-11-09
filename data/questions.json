@@ -1,0 +1,8 @@
+[
+  {"id": "q1", "text": "강남에서 홍대입구까지, 환승 한 번 이하로, 8시 20분에 출발해서 9시 전에 도착하고 싶어",
+   "origin": "강남", "dest": "홍대입구", "max_transfers": 1, "depart": "08:20", "arrive_by": "09:00"},
+  {"id": "q2", "text": "서울역에서 잠실까지 가장 빨리 가는 길 알려줘",
+   "origin": "서울역", "dest": "잠실", "max_transfers": null, "depart": null, "arrive_by": null},
+  {"id": "q3", "text": "방화에서 마천까지 환승 없이 가고 싶어",
+   "origin": "방화", "dest": "마천", "max_transfers": 0, "depart": null, "arrive_by": null}
+]
