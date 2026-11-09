@@ -10,7 +10,10 @@ class Answer:
 
 
 def stub(question_text: str) -> Answer:
-    """LLM 없이 고정된 답. 모든 질문에 빈 답을 돌려준다. 다음 티켓에서 LLM 혼자 / LLM + 도구가 이 자리에 들어간다."""
+    """LLM 없이 고정된 답. 모든 질문에 빈 답을 돌려준다.
+
+    다음 티켓에서 LLM 혼자 / LLM + 도구가 이 자리에 들어간다.
+    """
     return Answer()
 
 
