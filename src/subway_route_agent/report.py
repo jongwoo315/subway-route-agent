@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from itertools import pairwise
 
 from subway_route_agent.answerers import Answer
 from subway_route_agent.grade import Grade
@@ -32,7 +33,7 @@ def format_path(route: Route | None) -> str:
         return "없음"
     nodes = route.nodes
     parts = [f"{nodes[0][0]}({nodes[0][1]})"]
-    for a, b in zip(nodes, nodes[1:], strict=False):
+    for a, b in pairwise(nodes):
         if a[1] != b[1]:
             parts.append(f"{a[0]}({a[1]}→{b[1]})")
     parts.append(f"{nodes[-1][0]}({nodes[-1][1]})")

@@ -13,6 +13,8 @@ class Route:
 
 def shortest(g: Graph, origin: str, dest: str, max_transfers: int | None = None) -> Route | None:
     """상태를 (노드, 환승 횟수)로 늘린 다익스트라. 환승 상한이 있어도 최단을 구한다."""
+    # 상한이 없어도 최단 경로의 환승은 노드 수를 못 넘는다. 도착역이 없을 때 큐가 끝나게 한다
+    cap = len(g) if max_transfers is None else max_transfers
     pq = [(0, 0, n, (n,)) for n in g if n[0] == origin]
     heapq.heapify(pq)
     done: set[tuple[Node, int]] = set()
@@ -25,7 +27,7 @@ def shortest(g: Graph, origin: str, dest: str, max_transfers: int | None = None)
         done.add((node, tr))
         for nxt, w in g[node]:
             ntr = tr + (nxt[1] != node[1])
-            if max_transfers is not None and ntr > max_transfers:
+            if ntr > cap:
                 continue
             heapq.heappush(pq, (sec + w, ntr, nxt, path + (nxt,)))
     return None

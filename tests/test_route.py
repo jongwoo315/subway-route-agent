@@ -34,3 +34,7 @@ def test_q3_uses_macheon_branch():
 def test_q2_needs_transfer():
     r = shortest(REAL, "서울역", "잠실")
     assert r.transfers >= 1
+
+
+def test_unknown_destination_returns_none_without_cap():
+    assert shortest(REAL, "강남", "없는역") is None

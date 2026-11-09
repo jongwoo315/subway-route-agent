@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from itertools import pairwise
 
 from subway_route_agent.answerers import Answer
 from subway_route_agent.graph import Graph, Node
@@ -16,7 +17,7 @@ class Grade:
 
 def path_seconds(g: Graph, path: list[Node]) -> int | None:
     total = 0
-    for a, b in zip(path, path[1:], strict=False):
+    for a, b in pairwise(path):
         w = next((w for n, w in g.get(a, []) if n == b), None)
         if w is None:
             return None
@@ -42,10 +43,10 @@ def grade(g: Graph, q: dict, ans: Answer, truth: Route | None) -> Grade:
         v.append("도착역 다름")
     if actual is None:
         v.append("경로 끊김")
-    transfers = sum(a[1] != b[1] for a, b in zip(path, path[1:], strict=False))
-    if q["max_transfers"] is not None and transfers > q["max_transfers"]:
+    transfers = sum(a[1] != b[1] for a, b in pairwise(path))
+    if q.get("max_transfers") is not None and transfers > q["max_transfers"]:
         v.append("환승 초과")
-    if actual is not None and q["arrive_by"] and q["depart"]:
+    if actual is not None and q.get("arrive_by") and q.get("depart"):
         if _minutes(q["depart"]) * 60 + actual > _minutes(q["arrive_by"]) * 60:
             v.append("시한 초과")
     invented_time = int(
