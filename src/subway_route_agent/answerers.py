@@ -61,6 +61,8 @@ def _parse(raw: str) -> tuple[list[tuple[str, int]], int | None]:
         raise ValueError(f"JSON이 아니다: {e.msg}") from e
     if not isinstance(data, dict) or not isinstance(data.get("path"), list):
         raise ValueError("path 목록이 없다")
+    if not data["path"]:
+        raise ValueError("path가 비어 있다")
     path = []
     for i, step in enumerate(data["path"]):
         st, ln = (step.get("station"), step.get("line")) if isinstance(step, dict) else (None, None)

@@ -49,6 +49,7 @@ def test_good_json_fills_path_seconds_tokens():
         json.dumps({"path": [{"station": "강남"}], "seconds": None}),
         json.dumps({"path": "강남", "seconds": None}),
         json.dumps([1, 2]),
+        json.dumps({"path": [], "seconds": 300}),
     ],
 )
 def test_unreadable_answer_sets_parse_error_without_raising(bad):
