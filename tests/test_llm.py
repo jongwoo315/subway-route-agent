@@ -188,3 +188,16 @@ def test_api_error_midway_keeps_raw_of_answered_questions(monkeypatch, tmp_path)
     saved = json.loads(raw.read_text(encoding="utf-8"))
     assert list(saved) == ["q1"] and saved["q1"] == {"raw": GOOD, "tokens": 7, "parse_error": None}
     assert not out.exists()
+
+
+def test_api_error_propagates_out_of_make_llm():
+    import openai
+
+    client = FakeClient(GOOD)
+
+    def fail(**kwargs):
+        raise openai.APIError("연결 실패", request=None, body=None)
+
+    client.responses = SimpleNamespace(create=fail)
+    with pytest.raises(openai.APIError):
+        make_llm(client)("질문")
