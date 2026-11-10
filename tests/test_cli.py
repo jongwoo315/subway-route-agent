@@ -7,7 +7,8 @@ from subway_route_agent.report import Result, format_path, format_seconds, rende
 from subway_route_agent.route import Route, shortest
 
 
-def test_main_runs_end_to_end(tmp_path, capsys):
+def test_main_runs_end_to_end(tmp_path, capsys, monkeypatch):
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)  # stub은 키 없이 끝까지 돈다
     out = tmp_path / "stub.md"
     assert main(["--out", str(out)]) == 0
     text = out.read_text(encoding="utf-8")
