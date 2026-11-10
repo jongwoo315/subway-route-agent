@@ -1,3 +1,5 @@
+import json
+
 from subway_route_agent.answerers import Answer
 from subway_route_agent.cli import main
 from subway_route_agent.data import Row
@@ -77,3 +79,56 @@ def test_render_counts_parse_failures_and_shows_tokens():
     assert lines[0] == "# 리포트"
     rows = {line.split(" | ")[0].lstrip("| "): line.split(" | ") for line in lines}
     assert rows["q1"][-1].strip(" |") == "120" and rows["q2"][-1].strip(" |") == "80"
+
+
+def _question(qid, origin, dest, **kw):
+    q = {"id": qid, "text": f"{origin}에서 {dest}까지", "origin": origin, "dest": dest,
+         "max_transfers": None, "depart": None, "arrive_by": None}
+    return {**q, **kw}
+
+
+def _run_with(monkeypatch, tmp_path, questions):
+    from subway_route_agent import cli
+
+    qfile = tmp_path / "questions.json"
+    qfile.write_text(json.dumps(questions, ensure_ascii=False), encoding="utf-8")
+    monkeypatch.setattr(cli, "QUESTIONS", qfile)
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    out = tmp_path / "stub.md"
+    return main(["--out", str(out)]), out
+
+
+def _rows(text):
+    return {line.split(" | ")[0].lstrip("| "): line.split(" | ") for line in text.splitlines()}
+
+
+def test_station_missing_from_graph_stops_before_running(monkeypatch, tmp_path, capsys):
+    qs = [_question("q1", "강남", "홍대입구"), _question("q5", "강남", "무슨역")]
+    code, out = _run_with(monkeypatch, tmp_path, qs)
+    assert code == 2 and not out.exists()
+    assert "질문 q5: 그래프에 없는 역 — 무슨역" in capsys.readouterr().err
+
+
+def test_every_missing_station_is_reported(monkeypatch, tmp_path, capsys):
+    qs = [_question("q1", "가나다", "라마바")]
+    code, _ = _run_with(monkeypatch, tmp_path, qs)
+    err = capsys.readouterr().err
+    assert code == 2 and "가나다" in err and "라마바" in err
+
+
+def test_alias_station_name_passes_the_check_and_is_found(monkeypatch, tmp_path):
+    # 총신대입구는 그래프에서 이수다. 별칭을 바꾼 뒤 검사하고 정답도 같은 이름으로 찾는다
+    code, out = _run_with(monkeypatch, tmp_path, [_question("q1", "총신대입구", "사당")])
+    assert code == 0
+    assert _rows(out.read_text(encoding="utf-8"))["q1"][1] != "없음"
+
+
+def test_deadline_that_even_shortest_route_misses_has_no_truth(monkeypatch, tmp_path):
+    # 건대입구→강남 최단은 15분인데 시한까지 10분이다
+    missed = _question("q6", "건대입구", "강남", depart="08:40", arrive_by="08:50")
+    kept = _question("q7", "건대입구", "강남", depart="08:40", arrive_by="09:00")
+    code, out = _run_with(monkeypatch, tmp_path, [missed, kept])
+    rows = _rows(out.read_text(encoding="utf-8"))
+    assert code == 0
+    assert rows["q6"][1] == "없음" and rows["q6"][2] == "없음"
+    assert rows["q7"][1] != "없음" and rows["q7"][2] == "15분 0초"
