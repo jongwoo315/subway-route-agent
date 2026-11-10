@@ -1,0 +1,56 @@
+from subway_route_agent.data import Row, load_rows
+from subway_route_agent.graph import build_graph
+from subway_route_agent.route import shortest
+
+REAL = build_graph(load_rows())
+
+
+def test_transfer_limit_forces_slower_route():
+    rows = [
+        Row(1, "A", 0), Row(1, "B", 60), Row(1, "C", 600),
+        Row(2, "B", 0), Row(2, "C", 60),
+    ]
+    g = build_graph(rows)
+    fast = shortest(g, "A", "C")
+    assert fast.transfers == 1 and fast.seconds == 60 + 180 + 60
+    direct = shortest(g, "A", "C", max_transfers=0)
+    assert direct.transfers == 0 and direct.seconds == 660
+
+
+def test_unknown_station_returns_none():
+    assert shortest(REAL, "없는역", "강남") is None
+
+
+def test_q1_matches_hand_count():
+    r = shortest(REAL, "강남", "홍대입구", max_transfers=1)
+    assert r.seconds == 1740 and r.transfers == 0
+
+
+def test_q3_uses_macheon_branch():
+    r = shortest(REAL, "방화", "마천", max_transfers=0)
+    assert ("둔촌동", 5) in r.nodes and ("상일동", 5) not in r.nodes
+
+
+def test_q2_needs_transfer():
+    r = shortest(REAL, "서울역", "잠실")
+    assert r.transfers >= 1
+
+
+def test_circular_lines_close_on_repeated_station():
+    # 2호선은 시청이 두 번, 6호선 응암순환은 응암이 두 번 나와서 고리가 닫힌다
+    assert shortest(REAL, "충정로", "시청", max_transfers=0).seconds == 90
+    assert shortest(REAL, "구산", "새절", max_transfers=0).nodes == [
+        ("구산", 6), ("응암", 6), ("새절", 6)
+    ]
+
+
+def test_eungam_loop_is_one_way():
+    # 응암순환은 응암→역촌→불광→독바위→연신내→구산→응암 한 방향만 달린다
+    # 역촌→구산: 응암을 거치는 역방향(220초)이 아니라 불광·독바위·연신내를 도는 370초
+    assert shortest(REAL, "역촌", "구산", max_transfers=0).seconds == 370
+    # 연신내→역촌: 구산·응암을 거쳐 300초
+    assert shortest(REAL, "연신내", "역촌", max_transfers=0).seconds == 300
+
+
+def test_unknown_destination_returns_none_without_cap():
+    assert shortest(REAL, "강남", "없는역") is None
