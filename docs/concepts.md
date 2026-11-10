@@ -21,9 +21,9 @@ plan·리포트·PR 본문·판단 기록에서 쓰는 말이다. 「쓰지 말 
 
 | 이름 | 뜻 | 정의한 곳 | 만든 티켓 |
 | --- | --- | --- | --- |
-| `Answer.path` | 답하는 쪽이 말한 경로. (역, 호선) 목록이다. 비어 있으면 답이 없다 | `src/subway_route_agent/answerers.py:7` | #185 |
-| `Answer.seconds` | 답하는 쪽이 말한 소요 시간(초). 말하지 않았으면 `None` | `src/subway_route_agent/answerers.py:8` | #185 |
-| `Answer.tool_calls` | 질문 하나에 쓴 도구 호출 수. stub은 0 | `src/subway_route_agent/answerers.py:9` | #185 |
+| `Answer.path` | 답하는 쪽이 말한 경로. (역, 호선) 목록이다. 비어 있으면 답이 없다 | `src/subway_route_agent/answerers.py:10` | #185 |
+| `Answer.seconds` | 답하는 쪽이 말한 소요 시간(초). 말하지 않았으면 `None` | `src/subway_route_agent/answerers.py:11` | #185 |
+| `Answer.tool_calls` | 질문 하나에 쓴 도구 호출 수. stub은 0 | `src/subway_route_agent/answerers.py:12` | #185 |
 | `Answer.parse_error` | LLM 원문을 답 형식으로 읽지 못한 이유 한 줄. 읽었으면 `None`. 값이 있는 행이 리포트의 `파싱 실패`로 센다 | `src/subway_route_agent/answerers.py:13` | #186 |
 | `Answer.tokens` | 질문 하나에 쓴 입력 + 출력 토큰. stub은 0 | `src/subway_route_agent/answerers.py:14` | #186 |
 | `Answer.raw` | LLM이 돌려준 원문. `--raw`로 질문별로 파일에 쓴다 | `src/subway_route_agent/answerers.py:15` | #186 |
