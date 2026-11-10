@@ -71,7 +71,8 @@ def main(argv: list[str] | None = None) -> int:
                 _write_raw(args.raw, results)
             return 1
         ms = (time.perf_counter() - t0) * 1000
-        results.append(Result(q["id"], truth, ans, grade(g, q, ans, truth), ms))
+        results.append(Result(q["id"], truth, ans, grade(g, q, ans, truth), ms,
+                              "hand_seconds" in q))
 
     if args.raw:
         _write_raw(args.raw, results)

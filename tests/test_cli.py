@@ -1,12 +1,14 @@
 import json
 
 from subway_route_agent.answerers import Answer
-from subway_route_agent.cli import main
+from subway_route_agent.cli import QUESTIONS, main
 from subway_route_agent.data import Row
 from subway_route_agent.grade import Grade
 from subway_route_agent.graph import build_graph
 from subway_route_agent.report import Result, format_path, format_seconds, render
 from subway_route_agent.route import Route, shortest
+
+NO_TRUTH = {"q6", "q7"}
 
 
 def test_main_runs_end_to_end(tmp_path, capsys, monkeypatch):
@@ -16,15 +18,19 @@ def test_main_runs_end_to_end(tmp_path, capsys, monkeypatch):
     text = out.read_text(encoding="utf-8")
     assert capsys.readouterr().out.strip() == text.strip()
     rows = {line.split(" | ")[0].lstrip("| "): line.split(" | ") for line in text.splitlines()}
-    for qid in ("q1", "q2", "q3"):
-        assert qid in rows
-        assert rows[qid][1] != "없음" and rows[qid][2] != "없음"  # 정답이 채워져 있다
-    assert "0/3" in text
+    questions = json.loads(QUESTIONS.read_text(encoding="utf-8"))
+    for q in questions:
+        assert q["id"] in rows
+        # 정답 없음 질문(q6 시한을 못 맞춘다, q7 환승 0회로 갈 길이 없다)만 정답이 없음이다
+        none = q["id"] in NO_TRUTH
+        assert (rows[q["id"]][1] == "없음") == none and (rows[q["id"]][2] == "없음") == none
+    assert f"정답률 0/{len(questions)} (0%)" in text
+    assert "- 손 계산으로 확인한 정답: 8/8" in text  # 정답이 있는 8개 모두 손 계산 값이 있다
     assert rows["q1"][1] == "강남(2) → 홍대입구(2)" and rows["q1"][2] == "29분 0초"
 
 
 def test_render_counts_correct_and_answered_rows():
-    # stub만 돌리면 정답률이 늘 0/3이라 hits 계산이 고장 나도 안 걸린다
+    # stub만 돌리면 정답률이 늘 0이라 hits 계산이 고장 나도 안 걸린다
     route = Route([("A", 1), ("C", 1)], 660, 0)
     hit = Result("q1", route, Answer(path=route.nodes, seconds=660), Grade(True, True), 1.0)
     miss = Result("q2", route, Answer(), Grade(False, False), 1.0)
@@ -132,3 +138,15 @@ def test_deadline_that_even_shortest_route_misses_has_no_truth(monkeypatch, tmp_
     assert code == 0
     assert rows["q6"][1] == "없음" and rows["q6"][2] == "없음"
     assert rows["q7"][1] != "없음" and rows["q7"][2] == "15분 0초"
+
+
+def test_render_counts_hand_checked_answers_among_questions_with_truth():
+    route = Route([("A", 1), ("C", 1)], 660, 0)
+    g = Grade(False, False)
+    checked = Result("q1", route, Answer(), g, 1.0, hand_checked=True)
+    unchecked = Result("q2", route, Answer(), g, 1.0)
+    no_truth = Result("q3", None, Answer(), g, 1.0, hand_checked=True)  # 정답 없음은 세지 않는다
+    text = render("t", "d.csv", [checked, unchecked, no_truth])
+    assert "- 손 계산으로 확인한 정답: 1/2" in text
+    lines = text.splitlines()
+    assert lines.index("- 파싱 실패 0/3") + 1 == lines.index("- 손 계산으로 확인한 정답: 1/2")

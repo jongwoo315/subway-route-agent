@@ -3,6 +3,7 @@ from itertools import pairwise
 
 import pytest
 
+from subway_route_agent.cli import truth_for
 from subway_route_agent.data import ROOT, Row, load_rows
 from subway_route_agent.graph import TRANSFER_SECONDS, build_graph
 from subway_route_agent.route import shortest
@@ -122,3 +123,41 @@ def test_eungam_loop_is_one_way():
 
 def test_unknown_destination_returns_none_without_cap():
     assert shortest(REAL, "강남", "없는역") is None
+
+
+def _question(qid: str) -> dict:
+    return next(q for q in QUESTIONS if q["id"] == qid)
+
+
+def test_q6_has_no_truth_because_even_fastest_route_misses_deadline():
+    q = _question("q6")
+    fastest = shortest(REAL, q["origin"], q["dest"], q["max_transfers"])
+    assert fastest is not None and fastest.seconds == q["hand_seconds"]
+    late = (8 * 60 + 40) * 60 + fastest.seconds - (8 * 60 + 50) * 60
+    assert late == 300  # 5분 늦다
+    assert truth_for(REAL, q) is None
+
+
+def test_q7_has_no_truth_because_no_single_line_connects_the_stations():
+    q = _question("q7")
+    assert shortest(REAL, q["origin"], q["dest"], 0) is None
+    # 환승 상한 때문이지 역이 없어서가 아니다
+    assert shortest(REAL, q["origin"], q["dest"]) is not None
+    assert truth_for(REAL, q) is None
+
+
+def test_every_question_has_hand_note_and_hand_path_pairs_with_seconds():
+    for q in QUESTIONS:
+        assert q["hand_note"], q["id"]
+        assert ("hand_path" in q) == ("hand_seconds" in q), q["id"]
+        if "hand_path" not in q:
+            assert truth_for(REAL, q) is None, q["id"]  # 손 계산이 없는 질문은 정답 없음이다
+
+
+def test_questions_cover_the_cases_the_ticket_names():
+    by_id = {q["id"]: q for q in QUESTIONS}
+    assert by_id["q4"]["depart"] and not by_id["q4"]["arrive_by"]
+    assert by_id["q5"]["arrive_by"] and not by_id["q5"]["depart"]
+    assert by_id["q7"]["max_transfers"] == 0 and by_id["q9"]["max_transfers"] == 1
+    assert len(by_id["q8"]["hand_path"]) - 1 >= 2  # 환승 2회 이상
+    assert truth_for(REAL, by_id["q8"]).transfers >= 2
