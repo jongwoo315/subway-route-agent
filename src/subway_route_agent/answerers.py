@@ -7,6 +7,9 @@ class Answer:
     path: list[tuple[str, int]] = field(default_factory=list)  # [(역, 호선)]
     seconds: int | None = None
     tool_calls: int = 0
+    parse_error: str | None = None  # LLM 원문을 답 형식으로 읽지 못한 이유
+    tokens: int = 0  # 입력 + 출력 토큰
+    raw: str | None = None  # LLM 원문
 
 
 def stub(question_text: str) -> Answer:

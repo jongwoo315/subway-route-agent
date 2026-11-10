@@ -11,13 +11,13 @@ from subway_route_agent.report import Result, render
 from subway_route_agent.route import shortest
 
 QUESTIONS = ROOT / "data" / "questions.json"
-REPORT = ROOT / "reports" / "skeleton.md"
+REPORT_DIR = ROOT / "reports"
 
 
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="subway-eval")
     p.add_argument("--answerer", choices=sorted(ANSWERERS), default="stub")
-    p.add_argument("--out", type=Path, default=REPORT)
+    p.add_argument("--out", type=Path, default=None)
     args = p.parse_args(argv)
 
     g = build_graph(load_rows())
@@ -32,7 +32,8 @@ def main(argv: list[str] | None = None) -> int:
         results.append(Result(q["id"], truth, ans, grade(g, q, ans, truth), ms))
 
     text = render(args.answerer, DATA.name, results)
-    args.out.parent.mkdir(parents=True, exist_ok=True)
-    args.out.write_text(text, encoding="utf-8")
+    out = args.out or REPORT_DIR / f"{args.answerer}.md"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(text, encoding="utf-8")
     print(text, end="")
     return 0

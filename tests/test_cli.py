@@ -8,7 +8,7 @@ from subway_route_agent.route import Route, shortest
 
 
 def test_main_runs_end_to_end(tmp_path, capsys):
-    out = tmp_path / "skeleton.md"
+    out = tmp_path / "stub.md"
     assert main(["--out", str(out)]) == 0
     text = out.read_text(encoding="utf-8")
     assert capsys.readouterr().out.strip() == text.strip()
@@ -53,3 +53,26 @@ def test_format_path_shows_endpoints_and_transfer_stations_only():
     assert format_path(shortest(g, "A", "C", max_transfers=0)) == "A(1) → C(1)"
     assert format_path(shortest(g, "A", "C")) == "A(1) → B(1→2) → C(2)"
     assert format_path(None) == "없음"
+
+
+def test_default_report_path_follows_answerer(tmp_path, monkeypatch):
+    from subway_route_agent import cli
+
+    monkeypatch.setattr(cli, "REPORT_DIR", tmp_path)
+    assert main([]) == 0
+    assert (tmp_path / "stub.md").exists()
+
+
+def test_render_counts_parse_failures_and_shows_tokens():
+    route = Route([("A", 1), ("C", 1)], 660, 0)
+    ok = Result("q1", route, Answer(path=route.nodes, tokens=120), Grade(True, True), 1.0)
+    bad = Result("q2", route, Answer(parse_error="JSON 아님", tokens=80), Grade(False, False), 1.0)
+    text = render("llm", "d.csv", [ok, bad], model="gpt-x")
+    assert "- 파싱 실패 1/2" in text
+    assert "- 답하는 쪽: llm (모델 gpt-x)" in text
+    lines = text.splitlines()
+    header = next(line for line in lines if line.startswith("| 질문"))
+    assert header.split(" | ")[-1].strip(" |") == "토큰"
+    assert lines[0] == "# 리포트"
+    rows = {line.split(" | ")[0].lstrip("| "): line.split(" | ") for line in lines}
+    assert rows["q1"][-1].strip(" |") == "120" and rows["q2"][-1].strip(" |") == "80"
