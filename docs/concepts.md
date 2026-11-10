@@ -24,6 +24,9 @@ plan·리포트·PR 본문·판단 기록에서 쓰는 말이다. 「쓰지 말 
 | `Answer.path` | 답하는 쪽이 말한 경로. (역, 호선) 목록이다. 비어 있으면 답이 없다 | `src/subway_route_agent/answerers.py:7` | #185 |
 | `Answer.seconds` | 답하는 쪽이 말한 소요 시간(초). 말하지 않았으면 `None` | `src/subway_route_agent/answerers.py:8` | #185 |
 | `Answer.tool_calls` | 질문 하나에 쓴 도구 호출 수. stub은 0 | `src/subway_route_agent/answerers.py:9` | #185 |
+| `Answer.parse_error` | LLM 원문을 답 형식으로 읽지 못한 이유 한 줄. 읽었으면 `None`. 값이 있는 행이 리포트의 `파싱 실패`로 센다 | `src/subway_route_agent/answerers.py:13` | #186 |
+| `Answer.tokens` | 질문 하나에 쓴 입력 + 출력 토큰. stub은 0 | `src/subway_route_agent/answerers.py:14` | #186 |
+| `Answer.raw` | LLM이 돌려준 원문. `--raw`로 질문별로 파일에 쓴다 | `src/subway_route_agent/answerers.py:15` | #186 |
 | `max_transfers` | 조건. 환승 횟수 상한. `None`이면 제한 없음 | `src/subway_route_agent/grade.py:47` | #185 |
 | `depart` | 조건. 출발 시각(`HH:MM`). `arrive_by`와 같이 있을 때만 시한을 잰다 | `src/subway_route_agent/grade.py:49` | #185 |
 | `arrive_by` | 조건. 도착 시한(`HH:MM`). 출발 시각 + 실제 소요 시간이 이보다 늦으면 어긴 것 | `src/subway_route_agent/grade.py:49` | #185 |
@@ -32,5 +35,8 @@ plan·리포트·PR 본문·판단 기록에서 쓰는 말이다. 「쓰지 말 
 | `경로 끊김` | 조건 어김. 이웃한 두 노드 사이에 간선이 없다 | `src/subway_route_agent/grade.py:45` | #185 |
 | `환승 초과` | 조건 어김. 답 경로의 환승 횟수가 `max_transfers`보다 많다 | `src/subway_route_agent/grade.py:48` | #185 |
 | `시한 초과` | 조건 어김. 출발 시각 + 실제 소요 시간이 `arrive_by`보다 늦다 | `src/subway_route_agent/grade.py:51` | #185 |
-| 리포트 열 | `COLUMNS` 10개: 질문 · 정답 경로 · 정답 시간 · 답 있음 · 맞음 · 지어낸 역 · 지어낸 소요 시간 · 조건 어김 · 도구 호출 · 응답 시간(ms) | `src/subway_route_agent/report.py:9` | #185 |
-| `ANSWERERS` | 답하는 쪽 목록. 지금은 `stub` 하나 | `src/subway_route_agent/answerers.py:21` | #185 |
+| 리포트 열 | `COLUMNS` 11개: 질문 · 정답 경로 · 정답 시간 · 답 있음 · 맞음 · 지어낸 역 · 지어낸 소요 시간 · 조건 어김 · 도구 호출 · 응답 시간(ms) · 토큰 | `src/subway_route_agent/report.py:9` | #185, #186 |
+| `ANSWERERS` | 답하는 쪽 목록. `stub`과 `llm` 둘. `llm`은 첫 호출 때 client를 만든다 | `src/subway_route_agent/answerers.py:109` | #185, #186 |
+| `llm` | 답하는 쪽. LLM 혼자 — 질문 문장만 OpenAI에 보내고 JSON으로 경로와 소요 시간을 받는다. `--answerer llm`으로 고른다 | `src/subway_route_agent/answerers.py:76` | #186 |
+| `SYSTEM` | LLM 혼자의 시스템 지시. 답 형식만 설명하고 역 목록·정답·질문별 힌트는 넣지 않는다 | `src/subway_route_agent/answerers.py:29` | #186 |
+| `OPENAI_MODEL` | 환경변수. `llm`이 쓰는 모델 이름. 비면 `gpt-5.4-mini` | `src/subway_route_agent/answerers.py:26` | #186 |
