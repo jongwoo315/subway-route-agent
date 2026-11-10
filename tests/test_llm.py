@@ -6,6 +6,7 @@ import pytest
 from subway_route_agent import answerers
 from subway_route_agent.answerers import ANSWERERS, Answer, make_llm
 from subway_route_agent.cli import main
+from subway_route_agent.data import ROOT
 
 
 class FakeClient:
@@ -100,3 +101,33 @@ def test_api_error_exits_1_without_report(monkeypatch, tmp_path, capsys):
     assert main(["--answerer", "llm", "--out", str(out)]) == 1
     assert "API 오류" in capsys.readouterr().err
     assert not out.exists()
+
+
+def test_replay_recorded_responses_end_to_end(monkeypatch, tmp_path):
+    # 실제 호출(#186 raw-1)을 녹화한 원문을 재생한다. API는 부르지 않는다
+    fixture = json.loads((ROOT / "tests" / "fixtures" / "llm_responses.json").read_text("utf-8"))
+    questions = json.loads((ROOT / "data" / "questions.json").read_text("utf-8"))
+    queue = [fixture[q["id"]] for q in questions]
+
+    class Replay:
+        def __init__(self):
+            self.responses = SimpleNamespace(create=self._create)
+
+        def _create(self, **kwargs):
+            rec = queue.pop(0)
+            usage = SimpleNamespace(input_tokens=rec["tokens"], output_tokens=0)
+            return SimpleNamespace(output_text=rec["raw"], usage=usage)
+
+    monkeypatch.setenv("OPENAI_API_KEY", "dummy")
+    monkeypatch.setitem(ANSWERERS, "llm", make_llm(Replay()))
+    out = tmp_path / "llm.md"
+    assert main(["--answerer", "llm", "--out", str(out)]) == 0
+    rows = {
+        line.split(" | ")[0].lstrip("| "): line.split(" | ")
+        for line in out.read_text(encoding="utf-8").splitlines()
+    }
+    for q in questions:
+        assert q["id"] in rows
+        # 읽지 못한 행은 답 있음 X, 읽은 행은 O
+        expect = "X" if fixture[q["id"]]["parse_error"] else "O"
+        assert rows[q["id"]][3] == expect
