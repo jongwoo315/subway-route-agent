@@ -117,7 +117,7 @@ def test_api_error_exits_1_without_report(monkeypatch, tmp_path, capsys):
 
 
 def test_replay_recorded_responses_end_to_end(monkeypatch, tmp_path):
-    # 실제 호출(#186 raw-1)을 녹화한 원문을 재생한다. API는 부르지 않는다
+    # tests/fixtures/llm_responses.json에 녹화한 실제 응답 원문을 재생한다. API는 부르지 않는다
     fixture = json.loads((ROOT / "tests" / "fixtures" / "llm_responses.json").read_text("utf-8"))
     questions = json.loads((ROOT / "data" / "questions.json").read_text("utf-8"))
     queue = [fixture[q["id"]] for q in questions]
@@ -139,11 +139,35 @@ def test_replay_recorded_responses_end_to_end(monkeypatch, tmp_path):
         line.split(" | ")[0].lstrip("| "): line.split(" | ")
         for line in out.read_text(encoding="utf-8").splitlines()
     }
+    text = out.read_text(encoding="utf-8")
+    assert "- 파싱 실패 0/3" in text and f"(모델 {answerers.MODEL})" in text
     for q in questions:
         assert q["id"] in rows
         # 읽지 못한 행은 답 있음 X, 읽은 행은 O
         expect = "X" if fixture[q["id"]]["parse_error"] else "O"
         assert rows[q["id"]][3] == expect
+    # 녹화한 응답은 모두 정답과 다르다(경로 끊김). 지어낸 역 열은 q1 1, q2 4, q3 0이었다
+    assert [rows[q["id"]][4] for q in questions] == ["X", "X", "X"]
+
+
+def test_replay_with_unreadable_response_marks_row_x_and_counts_failure(monkeypatch, tmp_path):
+    fixture = json.loads((ROOT / "tests" / "fixtures" / "llm_responses.json").read_text("utf-8"))
+    raws = [fixture["q1"]["raw"], "이건 JSON이 아니다", fixture["q3"]["raw"]]
+
+    class Replay:
+        def __init__(self):
+            self.responses = SimpleNamespace(create=lambda **kw: SimpleNamespace(
+                output_text=raws.pop(0),
+                usage=SimpleNamespace(input_tokens=1, output_tokens=1)))
+
+    monkeypatch.setenv("OPENAI_API_KEY", "dummy")
+    monkeypatch.setitem(ANSWERERS, "llm", make_llm(Replay()))
+    out = tmp_path / "llm.md"
+    assert main(["--answerer", "llm", "--out", str(out)]) == 0
+    text = out.read_text(encoding="utf-8")
+    assert "- 파싱 실패 1/3" in text
+    rows = {line.split(" | ")[0].lstrip("| "): line.split(" | ") for line in text.splitlines()}
+    assert [rows[q][3] for q in ("q1", "q2", "q3")] == ["O", "X", "O"]
 
 
 def test_api_error_midway_keeps_raw_of_answered_questions(monkeypatch, tmp_path):
