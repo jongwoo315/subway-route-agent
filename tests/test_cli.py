@@ -140,6 +140,17 @@ def test_deadline_that_even_shortest_route_misses_has_no_truth(monkeypatch, tmp_
     assert rows["q7"][1] != "없음" and rows["q7"][2] == "15분 0초"
 
 
+def test_arriving_exactly_at_the_deadline_keeps_truth(monkeypatch, tmp_path):
+    # 건대입구→강남 최단은 900초. 8시 40분 + 15분 = 8시 55분에 딱 맞으면 정답이 있다.
+    # 1분 모자라면 없다
+    on_time = _question("a", "건대입구", "강남", depart="08:40", arrive_by="08:55")
+    one_minute_short = _question("b", "건대입구", "강남", depart="08:40", arrive_by="08:54")
+    code, out = _run_with(monkeypatch, tmp_path, [on_time, one_minute_short])
+    rows = _rows(out.read_text(encoding="utf-8"))
+    assert code == 0
+    assert rows["a"][2] == "15분 0초" and rows["b"][2] == "없음"
+
+
 def test_render_counts_hand_checked_answers_among_questions_with_truth():
     route = Route([("A", 1), ("C", 1)], 660, 0)
     g = Grade(False, False)
