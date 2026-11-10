@@ -89,7 +89,11 @@ def make_llm(client=None) -> Callable[[str], Answer]:
                              "strict": True}},
         )
         raw = resp.output_text
-        tokens = resp.usage.input_tokens + resp.usage.output_tokens
+        usage = resp.usage
+        tokens = usage.input_tokens + usage.output_tokens if usage else 0
+        status = getattr(resp, "status", "completed")
+        if status != "completed":  # 거절·토큰 한도로 끊긴 응답은 JSON 오류와 구분한다
+            return Answer(parse_error=f"응답이 끝나지 않았다({status})", raw=raw, tokens=tokens)
         try:
             path, seconds = _parse(raw)
         except ValueError as e:

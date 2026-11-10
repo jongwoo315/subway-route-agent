@@ -58,6 +58,18 @@ def test_unreadable_answer_sets_parse_error_without_raising(bad):
     assert ans.raw == bad and ans.tokens == 10
 
 
+def test_missing_usage_and_unfinished_status_do_not_crash():
+    client = FakeClient(GOOD)
+    client._resp.usage = None
+    ans = make_llm(client)("질문")
+    assert ans.tokens == 0 and ans.parse_error is None
+
+    client = FakeClient("", tokens=(4, 1))
+    client._resp.status = "incomplete"
+    ans = make_llm(client)("질문")
+    assert "incomplete" in ans.parse_error and ans.path == [] and ans.tokens == 5
+
+
 def test_request_uses_instructions_and_json_schema_without_hints():
     client = FakeClient(GOOD)
     make_llm(client)("서울역에서 잠실까지")
