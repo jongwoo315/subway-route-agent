@@ -3,7 +3,9 @@ name = "subway-route-agent"
 version = "0.1.0"
 description = "서울 지하철 길찾기 — LLM에게 도구를 주면 무엇이 좋아지고 무엇이 비싸지나"
 requires-python = ">=3.11"
-dependencies = []
+dependencies = [
+    "openai>=3.49.0",
+]
 
 [project.scripts]
 subway-eval = "subway_route_agent.cli:main"

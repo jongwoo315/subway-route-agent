@@ -5,3 +5,5 @@ __pycache__/
 .env
 data/raw/
 .DS_Store
+runs/
+.claude/
