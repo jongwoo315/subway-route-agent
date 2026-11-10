@@ -1,38 +1,237 @@
 {
-  "schema_version": 2, "diagram_type": "workflow",
-  "meta": {"title": "subway-route-agent 전체 흐름", "locale": "ko", "quality_profile": "showcase", "output": "flow.html",
-    "repository": {"url": "https://github.com/jongwoo315/subway-route-agent", "provider": "github", "revision": "42b341c9a56296866e7267170c79586169fd4a75"}},
-  "lanes": [
-    {"id": "input", "label": "입력"},
-    {"id": "truth", "label": "정답 — 다익스트라"},
-    {"id": "answer", "label": "답하는 쪽"},
-    {"id": "grade", "label": "채점·리포트"}
-  ],
-  "mainPath": ["csv", "graph", "route", "grade", "report"],
-  "nodes": [
-    {"id": "csv", "lane": "input", "col": 0, "type": "database", "label": "역간 소요시간 CSV", "sublabel": "[새로] 1~8호선 279행", "tag": "새로 생김",
-     "sources": [{"path": "src/subway_route_agent/data.py", "line": 21, "label": "load_rows"}]},
-    {"id": "questions", "lane": "input", "col": 2, "type": "database", "label": "questions.json", "sublabel": "[새로] 질문 3개", "tag": "새로 생김",
-     "sources": [{"path": "data/questions.json", "line": 1}]},
-    {"id": "graph", "lane": "truth", "col": 1, "type": "backend", "label": "build_graph", "sublabel": "[새로] 지선·별칭·환승 180초", "tag": "새로 생김",
-     "sources": [{"path": "src/subway_route_agent/graph.py", "line": 19, "label": "build_graph"}]},
-    {"id": "route", "lane": "truth", "col": 2, "type": "backend", "label": "shortest", "sublabel": "[새로] 환승 상한 다익스트라", "tag": "새로 생김",
-     "sources": [{"path": "src/subway_route_agent/route.py", "line": 14, "label": "shortest"}]},
-    {"id": "stub", "lane": "answer", "col": 3, "type": "frontend", "label": "stub", "sublabel": "[새로] 빈 답. LLM 자리", "tag": "새로 생김",
-     "sources": [{"path": "src/subway_route_agent/answerers.py", "line": 12, "label": "stub"}]},
-    {"id": "grade", "lane": "grade", "col": 3, "type": "security", "label": "grade", "sublabel": "[새로] 지어낸 역·조건 어김", "tag": "새로 생김",
-     "sources": [{"path": "src/subway_route_agent/grade.py", "line": 33, "label": "grade"}]},
-    {"id": "report", "lane": "grade", "col": 4, "type": "backend", "label": "리포트", "sublabel": "[새로] 정답률 0/3", "tag": "새로 생김",
-     "sources": [{"path": "src/subway_route_agent/report.py", "line": 47, "label": "render"}]}
-  ],
-  "edges": [
-    {"id": "f1", "from": "csv", "to": "graph"},
-    {"id": "f2", "from": "graph", "to": "route"},
-    {"id": "f3", "from": "questions", "to": "route", "label": "출발·도착·조건"},
-    {"id": "f4", "from": "questions", "to": "stub", "label": "문장만"},
-    {"id": "f5", "from": "route", "to": "grade", "label": "정답"},
-    {"id": "f6", "from": "stub", "to": "grade", "label": "답"},
-    {"id": "f7", "from": "grade", "to": "report"}
-  ],
-  "cards": [{"dot": "cyan", "title": "읽는 법", "items": ["[새로]는 빈 레포 대비 PR #1이 만든 단계다", "답하는 쪽은 stub이라 정답률 0/3이 정상이다. 다음 티켓이 LLM으로 바꾼다"]}]
+ "schema_version": 2,
+ "diagram_type": "workflow",
+ "meta": {
+  "title": "subway-route-agent 전체 흐름",
+  "locale": "ko",
+  "quality_profile": "showcase",
+  "output": "flow.html",
+  "repository": {
+   "url": "https://github.com/jongwoo315/subway-route-agent",
+   "provider": "github",
+   "revision": "bb8cb2fb27f24b098e27151e52be4e619217b34d"
+  }
+ },
+ "lanes": [
+  {
+   "id": "input",
+   "label": "입력"
+  },
+  {
+   "id": "truth",
+   "label": "정답 — 다익스트라"
+  },
+  {
+   "id": "answer",
+   "label": "답하는 쪽"
+  },
+  {
+   "id": "grade",
+   "label": "채점·리포트"
+  }
+ ],
+ "mainPath": [
+  "csv",
+  "graph",
+  "route",
+  "grade",
+  "report"
+ ],
+ "nodes": [
+  {
+   "id": "csv",
+   "lane": "input",
+   "col": 0,
+   "type": "database",
+   "label": "역간 소요시간 CSV",
+   "sublabel": "1~8호선 279행",
+   "tag": "그대로",
+   "sources": [
+    {
+     "path": "src/subway_route_agent/data.py",
+     "line": 21,
+     "label": "load_rows"
+    }
+   ]
+  },
+  {
+   "id": "questions",
+   "lane": "input",
+   "col": 2,
+   "type": "database",
+   "label": "questions.json",
+   "sublabel": "질문 3개",
+   "tag": "그대로",
+   "sources": [
+    {
+     "path": "data/questions.json",
+     "line": 1
+    }
+   ]
+  },
+  {
+   "id": "graph",
+   "lane": "truth",
+   "col": 1,
+   "type": "backend",
+   "label": "build_graph",
+   "sublabel": "지선·별칭·환승 180초",
+   "tag": "그대로",
+   "sources": [
+    {
+     "path": "src/subway_route_agent/graph.py",
+     "line": 19,
+     "label": "build_graph"
+    }
+   ]
+  },
+  {
+   "id": "route",
+   "lane": "truth",
+   "col": 2,
+   "type": "backend",
+   "label": "shortest",
+   "sublabel": "환승 상한 다익스트라",
+   "tag": "그대로",
+   "sources": [
+    {
+     "path": "src/subway_route_agent/route.py",
+     "line": 14,
+     "label": "shortest"
+    }
+   ]
+  },
+  {
+   "id": "stub",
+   "lane": "answer",
+   "col": 3,
+   "type": "frontend",
+   "label": "stub",
+   "sublabel": "빈 답. 기본값",
+   "tag": "그대로",
+   "sources": [
+    {
+     "path": "src/subway_route_agent/answerers.py",
+     "line": 18,
+     "label": "stub"
+    }
+   ]
+  },
+  {
+   "id": "grade",
+   "lane": "grade",
+   "col": 3,
+   "type": "security",
+   "label": "grade",
+   "sublabel": "지어낸 역·조건 어김",
+   "tag": "그대로",
+   "sources": [
+    {
+     "path": "src/subway_route_agent/grade.py",
+     "line": 33,
+     "label": "grade"
+    }
+   ]
+  },
+  {
+   "id": "report",
+   "lane": "grade",
+   "col": 5,
+   "type": "backend",
+   "label": "리포트",
+   "sublabel": "[바뀜] 파싱 실패·토큰 열, 답하는 쪽마다 파일",
+   "tag": "조건 바뀜",
+   "sources": [
+    {
+     "path": "src/subway_route_agent/report.py",
+     "line": 47,
+     "label": "render"
+    }
+   ]
+  },
+  {
+   "id": "llm",
+   "lane": "answer",
+   "col": 4,
+   "type": "frontend",
+   "label": "llm — LLM 혼자",
+   "sublabel": "[새로] 문장만 OpenAI에 묻고 JSON을 읽는다",
+   "tag": "새로 생김",
+   "sources": [
+    {
+     "path": "src/subway_route_agent/answerers.py",
+     "line": 78,
+     "label": "make_llm"
+    },
+    {
+     "path": "src/subway_route_agent/answerers.py",
+     "line": 29,
+     "label": "SYSTEM"
+    }
+   ]
+  }
+ ],
+ "edges": [
+  {
+   "id": "f1",
+   "from": "csv",
+   "to": "graph"
+  },
+  {
+   "id": "f2",
+   "from": "graph",
+   "to": "route"
+  },
+  {
+   "id": "f3",
+   "from": "questions",
+   "to": "route",
+   "label": "출발·도착·조건"
+  },
+  {
+   "id": "f4",
+   "from": "questions",
+   "to": "stub",
+   "label": "문장만"
+  },
+  {
+   "id": "f5",
+   "from": "route",
+   "to": "grade",
+   "label": "정답"
+  },
+  {
+   "id": "f6",
+   "from": "stub",
+   "to": "grade",
+   "label": "답"
+  },
+  {
+   "id": "f7",
+   "from": "grade",
+   "to": "report"
+  },
+  {
+   "id": "f8",
+   "from": "questions",
+   "to": "llm",
+   "label": "문장만 (--answerer llm)"
+  },
+  {
+   "id": "f9",
+   "from": "llm",
+   "to": "grade",
+   "label": "답"
+  }
+ ],
+ "cards": [
+  {
+   "dot": "cyan",
+   "title": "읽는 법",
+   "items": [
+    "[새로]·[바뀜]은 PR #1 대비 이번 PR #2가 바꾼 단계다",
+    "답하는 쪽은 실행마다 하나다. 기본은 stub, --answerer llm이면 LLM 혼자"
+   ]
+  }
+ ]
 }
