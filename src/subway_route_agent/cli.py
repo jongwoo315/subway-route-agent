@@ -18,6 +18,13 @@ QUESTIONS = ROOT / "data" / "questions.json"
 REPORT_DIR = ROOT / "reports"
 
 
+def _write_raw(path: Path, results: list[Result]) -> None:
+    raw = {r.qid: {"raw": r.answer.raw, "tokens": r.answer.tokens,
+                   "parse_error": r.answer.parse_error} for r in results}
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(raw, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="subway-eval")
     p.add_argument("--answerer", choices=sorted(ANSWERERS), default="stub")
@@ -38,16 +45,15 @@ def main(argv: list[str] | None = None) -> int:
         try:
             ans = answer(q["text"])  # 답하는 쪽은 문장만 받는다
         except openai.APIError as e:
-            print(f"API 오류: {e}", file=sys.stderr)
+            print(f"API 오류({q['id']}): {e}", file=sys.stderr)
+            if args.raw:  # 이미 받은 답의 원문은 잃지 않는다. 리포트는 쓰지 않는다
+                _write_raw(args.raw, results)
             return 1
         ms = (time.perf_counter() - t0) * 1000
         results.append(Result(q["id"], truth, ans, grade(g, q, ans, truth), ms))
 
     if args.raw:
-        raw = {r.qid: {"raw": r.answer.raw, "tokens": r.answer.tokens,
-                       "parse_error": r.answer.parse_error} for r in results}
-        args.raw.parent.mkdir(parents=True, exist_ok=True)
-        args.raw.write_text(json.dumps(raw, ensure_ascii=False, indent=2), encoding="utf-8")
+        _write_raw(args.raw, results)
 
     model = MODEL if args.answerer == "llm" else None
     text = render(args.answerer, DATA.name, results, model)

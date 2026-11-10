@@ -144,3 +144,23 @@ def test_replay_recorded_responses_end_to_end(monkeypatch, tmp_path):
         # 읽지 못한 행은 답 있음 X, 읽은 행은 O
         expect = "X" if fixture[q["id"]]["parse_error"] else "O"
         assert rows[q["id"]][3] == expect
+
+
+def test_api_error_midway_keeps_raw_of_answered_questions(monkeypatch, tmp_path):
+    import openai
+
+    calls = []
+
+    def flaky(text):
+        calls.append(text)
+        if len(calls) == 2:
+            raise openai.APIError("연결 실패", request=None, body=None)
+        return Answer(raw=GOOD, tokens=7)
+
+    monkeypatch.setenv("OPENAI_API_KEY", "dummy")
+    monkeypatch.setitem(ANSWERERS, "llm", flaky)
+    raw, out = tmp_path / "raw.json", tmp_path / "x.md"
+    assert main(["--answerer", "llm", "--out", str(out), "--raw", str(raw)]) == 1
+    saved = json.loads(raw.read_text(encoding="utf-8"))
+    assert list(saved) == ["q1"] and saved["q1"] == {"raw": GOOD, "tokens": 7, "parse_error": None}
+    assert not out.exists()
