@@ -109,6 +109,7 @@ def make_llm(client=None) -> Callable[[str], Answer]:
 
 
 TOOL_CALL_LIMIT = 25
+LIMIT_REACHED = f"도구 호출 상한({TOOL_CALL_LIMIT})에 닿았다"  # 리포트가 이 문자열로 센다
 
 # LLM + 도구: 답 형식 설명은 SYSTEM 그대로. 역 목록·정답·질문별 힌트는 넣지 않는다
 TOOLS_SYSTEM = (
@@ -146,7 +147,7 @@ def make_llm_tools(client=None) -> Callable[[str], Answer]:
             for c in calls:
                 if tool_calls >= TOOL_CALL_LIMIT:
                     return Answer(
-                        parse_error=f"도구 호출 상한({TOOL_CALL_LIMIT})에 닿았다",
+                        parse_error=LIMIT_REACHED,
                         tool_calls=tool_calls, tokens=tokens, raw=resp.output_text,
                     )
                 tool_calls += 1
