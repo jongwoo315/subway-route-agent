@@ -74,6 +74,28 @@ def test_two_tool_calls_then_final_answer_sums_tokens_and_returns_outputs():
     assert third_input[1] is first.output[0] and third_input[3] is second.output[0]
 
 
+def test_tool_log_records_name_arguments_and_output_cut_to_200_chars():
+    long_call = call_item("c2", "line_stations", {"line": 2})  # 결과가 200자를 넘는다
+    client = FakeClient([
+        response([call_item("c1", "find_station", {"name": "강남"})]),
+        response([long_call]),
+        response(text=GOOD),
+    ])
+    ans = make_llm_tools(client)("질문")
+    assert [e["name"] for e in ans.tool_log] == ["find_station", "line_stations"]
+    assert json.loads(ans.tool_log[0]["arguments"]) == {"name": "강남"}
+    assert json.loads(ans.tool_log[0]["output"]) == {"found": True, "station": "강남", "lines": [2]}
+    assert len(ans.tool_log[1]["output"]) == 200
+    assert len(ans.tool_log) == ans.tool_calls == 2
+
+
+def test_tool_log_is_kept_when_limit_is_reached():
+    looping = [response([call_item(f"c{i}", "find_station", {"name": "강남"})])
+               for i in range(TOOL_CALL_LIMIT + 2)]
+    ans = make_llm_tools(FakeClient(looping))("질문")
+    assert len(ans.tool_log) == TOOL_CALL_LIMIT
+
+
 def test_request_has_tools_instructions_and_same_schema_as_llm_alone():
     client = FakeClient([response(text=GOOD)])
     make_llm_tools(client)("서울역에서 잠실까지")
@@ -193,10 +215,16 @@ def test_replay_recorded_tool_calls_end_to_end(monkeypatch, tmp_path):
     assert main(["--answerer", "llm-tools", "--out", str(out), "--raw", str(raw)]) == 0
     assert queue == []  # 녹화한 응답을 모두 차례로 썼다
     text = out.read_text(encoding="utf-8")
-    rows = {line.split(" | ")[0].lstrip("| "): line.split(" | ") for line in text.splitlines()}
+    header = next(ln for ln in text.splitlines() if ln.startswith("| 질문"))
+    cols = [c.strip() for c in header.strip("| ").split(" | ")]
+    rows = {ln.strip("| ").split(" | ")[0]: [c.strip() for c in ln.strip("| ").split(" | ")]
+            for ln in text.splitlines() if ln.startswith("| q")}
+    saved = json.loads(raw.read_text(encoding="utf-8"))
     for qid, rec in fixture.items():
-        assert rows[qid][8] == str(rec["tool_calls"]) and int(rec["tool_calls"]) > 0
-        assert rows[qid][-1].strip(" |") == str(rec["tokens"])
+        assert rows[qid][cols.index("도구 호출")] == str(rec["tool_calls"])
+        assert int(rec["tool_calls"]) > 0
+        assert rows[qid][cols.index("토큰")] == str(rec["tokens"])
+        assert len(saved[qid]["tool_log"]) == rec["tool_calls"]
     assert "- 파싱 실패 0/2" in text
     # 녹화 때 모델이 부른 도구가 모두 실제 도구 이름이다
     called = {i.name for r in (to_namespace(r) for rec in fixture.values()

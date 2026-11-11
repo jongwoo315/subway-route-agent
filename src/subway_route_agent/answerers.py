@@ -16,6 +16,7 @@ class Answer:
     parse_error: str | None = None  # LLM 원문을 답 형식으로 읽지 못한 이유
     tokens: int = 0  # 입력 + 출력 토큰
     raw: str | None = None  # LLM 원문
+    tool_log: list[dict] = field(default_factory=list)  # 도구 호출마다 {name, arguments, output}
 
 
 def stub(question_text: str) -> Answer:
@@ -129,6 +130,7 @@ def make_llm_tools(client=None) -> Callable[[str], Answer]:
     def llm_tools(question_text: str) -> Answer:
         items: list = [{"role": "user", "content": question_text}]
         tokens = tool_calls = 0
+        tool_log: list[dict] = []
         while True:
             resp = client.responses.create(
                 model=MODEL,
@@ -149,20 +151,25 @@ def make_llm_tools(client=None) -> Callable[[str], Answer]:
                     return Answer(
                         parse_error=LIMIT_REACHED,
                         tool_calls=tool_calls, tokens=tokens, raw=resp.output_text,
+                        tool_log=tool_log,
                     )
                 tool_calls += 1
+                output = call_tool(c.name, c.arguments)
+                tool_log.append({"name": c.name, "arguments": c.arguments, "output": output[:200]})
                 items.append({"type": "function_call_output", "call_id": c.call_id,
-                              "output": call_tool(c.name, c.arguments)})
+                              "output": output})
         raw = resp.output_text
         status = getattr(resp, "status", "completed")
         if status != "completed":  # 거절·토큰 한도로 끊긴 응답은 JSON 오류와 구분한다
             return Answer(parse_error=f"응답이 끝나지 않았다({status})", raw=raw,
-                          tokens=tokens, tool_calls=tool_calls)
+                          tokens=tokens, tool_calls=tool_calls, tool_log=tool_log)
         try:
             path, seconds = _parse(raw)
         except ValueError as e:
-            return Answer(parse_error=str(e), raw=raw, tokens=tokens, tool_calls=tool_calls)
-        return Answer(path=path, seconds=seconds, raw=raw, tokens=tokens, tool_calls=tool_calls)
+            return Answer(parse_error=str(e), raw=raw, tokens=tokens, tool_calls=tool_calls,
+                          tool_log=tool_log)
+        return Answer(path=path, seconds=seconds, raw=raw, tokens=tokens, tool_calls=tool_calls,
+                      tool_log=tool_log)
 
     return llm_tools
 

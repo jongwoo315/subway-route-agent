@@ -5,10 +5,26 @@ from subway_route_agent.cli import QUESTIONS, main
 from subway_route_agent.data import Row
 from subway_route_agent.grade import Grade
 from subway_route_agent.graph import build_graph
-from subway_route_agent.report import Result, format_path, format_seconds, render, render_compare
+from subway_route_agent.report import (
+    COMPARE_COLUMNS,
+    Result,
+    format_path,
+    format_seconds,
+    render,
+    render_compare,
+)
 from subway_route_agent.route import Route, shortest
 
 NO_TRUTH = {"q6", "q7"}
+
+
+def _cells(text):
+    """리포트 표를 {질문: {열 이름: 값}}으로 읽는다. 열 위치에 기대지 않는다."""
+    lines = [ln for ln in text.splitlines() if ln.startswith("| ")]
+    cols = [c.strip() for c in lines[0].strip("| ").split(" | ")]
+    return {row.strip("| ").split(" | ")[0]: dict(zip(cols, [c.strip() for c in
+            row.strip("| ").split(" | ")], strict=True))
+            for row in lines[2:]}
 
 
 def test_main_runs_end_to_end(tmp_path, capsys, monkeypatch):
@@ -208,25 +224,22 @@ def test_two_answerers_write_each_report_and_compare_with_one_row_per_question(
     assert len(table) == len(questions) == 10
     header = next(line for line in text.splitlines() if line.startswith("| 질문"))
     for name in ("stub", "good"):
-        for col in ("맞음", "답 경로 소요 시간", "답이 말한 시간"):
+        for col in ("맞음", "채운 역", "답 경로 소요 시간", "답이 말한 시간"):
             assert f"{name} {col}" in header
     assert header.startswith("| 질문 | 정답 시간 |")
     assert "지시문에만" not in text  # llm-tools를 돌리지 않았으면 지시문 차이 줄도 없다
-    # 질문마다 두 답하는 쪽 값이 다 있다(열 수 = 2 + 3 × 2)
-    assert all(len(row.strip("| ").split(" | ")) == 8 for row in table)
+    # 질문마다 두 답하는 쪽 값이 다 있다(열 수 = 2 + 4 × 2)
+    assert all(len(row.strip("| ").split(" | ")) == 10 for row in table)
 
 
 def test_compare_marks_broken_path_and_empty_answer_and_times(monkeypatch, tmp_path):
     reports = _fake_answerers(monkeypatch, tmp_path)
     assert main(["--answerer", "stub", "broken", "good"]) == 0
     text = (reports / "compare.md").read_text(encoding="utf-8")
-    rows = {line.split(" | ")[0].lstrip("| "): line.split(" | ")
-            for line in text.splitlines() if line.startswith("| q")}
-    # 열: 질문, 정답 시간, stub(맞음, 경로, 말한 시간), broken(...), good(...)
-    q1 = [c.strip(" |") for c in rows["q1"]]
-    assert q1[2:5] == ["X", "답 없음", "없음"]
-    assert q1[5:8] == ["X", "끊김", "없음"]
-    assert q1[8:11] == ["O", "29분 0초", "29분 0초"]
+    q1 = _cells(text)["q1"]
+    assert [q1[f"stub {c}"] for c in COMPARE_COLUMNS] == ["X", "0", "답 없음", "없음"]
+    assert [q1[f"broken {c}"] for c in COMPARE_COLUMNS] == ["X", "0", "끊김", "없음"]
+    assert [q1[f"good {c}"] for c in COMPARE_COLUMNS] == ["O", "0", "29분 0초", "29분 0초"]
     assert "good" in text and "- good: 정답률 1/10" in text
 
 
@@ -290,8 +303,7 @@ def test_llm_tools_report_names_model_and_tools(monkeypatch, tmp_path):
     text = (reports / "llm-tools.md").read_text(encoding="utf-8")
     assert f"- 답하는 쪽: llm-tools (모델 {answerers.MODEL})" in text
     assert "- 도구: find_station, line_stations, travel_seconds (호출 상한 25)" in text
-    rows = {line.split(" | ")[0].lstrip("| "): line.split(" | ") for line in text.splitlines()}
-    assert rows["q1"][8] == "4"  # 도구 호출 열
+    assert _cells(text)["q1"]["도구 호출"] == "4"
 
 
 def test_api_error_in_second_answerer_keeps_first_raw_and_writes_no_report(
@@ -326,7 +338,7 @@ def test_render_compare_unit_head_and_rows():
     assert "응답 시간 합 2.0초" in text and "응답 시간 합 0.5초" in text
     row = next(line for line in text.splitlines() if line.startswith("| q1"))
     assert [c.strip(" |") for c in row.split(" | ")][1:] == [
-        "11분 0초", "O", "11분 0초", "11분 0초", "X", "답 없음", "없음"]
+        "11분 0초", "O", "0", "11분 0초", "11분 0초", "X", "0", "답 없음", "없음"]
 
 
 def test_render_compare_shows_instruction_difference_only_with_llm_tools():
@@ -344,3 +356,37 @@ def test_render_compare_does_not_count_empty_answer_as_matching_no_truth_questio
     r = Result("q6", None, Answer(), Grade(False, False), 0.0)
     text = render_compare("d.csv", {"stub": [r], "llm": [r]}, {}, g)
     assert "답이 말한 시간이 정답과 같은 질문 0/1" in text
+
+
+def test_report_has_filled_column_right_after_correct():
+    route = Route([("A", 1), ("C", 1)], 660, 0)
+    r = Result("q1", route, Answer(path=route.nodes), Grade(True, True, filled=3), 1.0)
+    text = render("t", "d.csv", [r])
+    header = next(ln for ln in text.splitlines() if ln.startswith("| 질문"))
+    cols = [c.strip() for c in header.strip("| ").split(" | ")]
+    assert cols[cols.index("맞음") + 1] == "채운 역"
+    assert _cells(text)["q1"]["채운 역"] == "3"
+
+
+def test_compare_head_counts_correct_answers_without_filling():
+    g = build_graph([Row(1, "A", 0), Row(1, "B", 60), Row(1, "C", 600)])
+    truth = Route([("A", 1), ("C", 1)], 660, 0)
+    full = Result("q1", truth, Answer(), Grade(True, True, filled=0), 1.0)
+    filled = Result("q2", truth, Answer(), Grade(True, True, filled=2), 1.0)
+    wrong = Result("q3", truth, Answer(), Grade(True, False, filled=0), 1.0)
+    text = render_compare("d.csv", {"x": [full, filled, wrong]}, {}, g)
+    line = next(ln for ln in text.splitlines() if ln.startswith("- x:"))
+    assert "정답률 2/3" in line and "채우지 않고도 맞은 질문 1/3" in line
+    assert _cells(text)["q2"]["x 채운 역"] == "2"
+
+
+def test_raw_file_has_tool_log(monkeypatch, tmp_path):
+    from subway_route_agent.answerers import ANSWERERS
+
+    reports = _fake_answerers(monkeypatch, tmp_path)
+    log = [{"name": "find_station", "arguments": "{}", "output": "{}"}]
+    monkeypatch.setitem(ANSWERERS, "logged", lambda text: Answer(raw="x", tool_log=log))
+    raw = tmp_path / "raw.json"
+    assert main(["--answerer", "logged", "--raw", str(raw)]) == 0
+    assert json.loads(raw.read_text("utf-8"))["q1"]["tool_log"] == log
+    assert reports.exists()
