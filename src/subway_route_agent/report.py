@@ -115,7 +115,7 @@ def render_compare(
         "",
         f"- 데이터: {data_name} (서울 열린데이터광장 OA-12034, 2024-08-10 기준, 1~8호선)",
         f"- 환승 한 번에 {TRANSFER_SECONDS}초로 고정한 stub이다. 기다리는 시간은 0으로 본다",
-        f"- {COMPARE_DIFF}",
+        *([f"- {COMPARE_DIFF}"] if "llm-tools" in by_answerer else []),
     ]
     for name in names:
         rs = by_answerer[name]

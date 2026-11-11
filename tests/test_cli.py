@@ -211,7 +211,7 @@ def test_two_answerers_write_each_report_and_compare_with_one_row_per_question(
         for col in ("맞음", "답 경로 소요 시간", "답이 말한 시간"):
             assert f"{name} {col}" in header
     assert header.startswith("| 질문 | 정답 시간 |")
-    assert "LLM + 도구 지시문에만 환승 180초와 도구 사용 안내가 있다" in text
+    assert "지시문에만" not in text  # llm-tools를 돌리지 않았으면 지시문 차이 줄도 없다
     # 질문마다 두 답하는 쪽 값이 다 있다(열 수 = 2 + 3 × 2)
     assert all(len(row.strip("| ").split(" | ")) == 8 for row in table)
 
@@ -327,3 +327,12 @@ def test_render_compare_unit_head_and_rows():
     row = next(line for line in text.splitlines() if line.startswith("| q1"))
     assert [c.strip(" |") for c in row.split(" | ")][1:] == [
         "11분 0초", "O", "11분 0초", "11분 0초", "X", "답 없음", "없음"]
+
+
+def test_render_compare_shows_instruction_difference_only_with_llm_tools():
+    g = build_graph([Row(1, "A", 0), Row(1, "B", 60)])
+    r = Result("q1", None, Answer(), Grade(False, False), 0.0)
+    with_tools = render_compare("d.csv", {"stub": [r], "llm-tools": [r]}, {}, g)
+    assert "- LLM + 도구 지시문에만 환승 180초와 도구 사용 안내가 있다" in with_tools
+    without = render_compare("d.csv", {"stub": [r], "llm": [r]}, {}, g)
+    assert "지시문에만" not in without
