@@ -138,3 +138,18 @@ def test_travel_seconds_does_not_use_transfer_edges():
     assert travel_seconds(2, "시청", "교대") == {"seconds": 1830}
     assert travel_seconds(2, "강남", "시청") == {"seconds": 1740}
     assert travel_seconds(3, "지축", "오금") == {"seconds": 3090}
+
+
+def test_line_stations_matches_graph_edges_for_every_line():
+    from subway_route_agent.tools import _graph
+
+    g = _graph()
+    for line in range(1, 9):
+        expected = {(a[0], b[0], w) for a, edges in g.items() if a[1] == line
+                    for b, w in edges if b[1] == line}
+        got = set()
+        for s in line_stations(line)["segments"]:
+            got.add((s["from"], s["to"], s["seconds"]))
+            if not s["one_way"]:
+                got.add((s["to"], s["from"], s["seconds"]))
+        assert got == expected, line
