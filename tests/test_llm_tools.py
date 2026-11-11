@@ -89,6 +89,14 @@ def test_tool_log_records_name_arguments_and_output_cut_to_200_chars():
     assert len(ans.tool_log) == ans.tool_calls == 2
 
 
+@pytest.mark.parametrize("final", [response(text="JSON 아님"),
+                                   response(text="", status="incomplete")])
+def test_tool_log_is_kept_when_final_answer_fails(final):
+    client = FakeClient([response([call_item("c1", "find_station", {"name": "강남"})]), final])
+    ans = make_llm_tools(client)("질문")
+    assert ans.parse_error and [e["name"] for e in ans.tool_log] == ["find_station"]
+
+
 def test_tool_log_is_kept_when_limit_is_reached():
     looping = [response([call_item(f"c{i}", "find_station", {"name": "강남"})])
                for i in range(TOOL_CALL_LIMIT + 2)]
