@@ -21,7 +21,7 @@ class Answer:
 def stub(question_text: str) -> Answer:
     """LLM 없이 고정된 답. 모든 질문에 빈 답을 돌려준다.
 
-    키 없이 끝까지 도는 기본 답하는 쪽이다. LLM 혼자는 `llm`, LLM + 도구는 다음 티켓에서 더한다.
+    키 없이 끝까지 도는 기본 답하는 쪽이다. LLM 혼자는 `llm`, LLM + 도구는 `llm-tools`가 맡는다.
     """
     return Answer()
 
