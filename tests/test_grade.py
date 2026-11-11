@@ -167,7 +167,8 @@ def test_fill_path_small_graph_fills_same_line_stop():
 
 
 def test_filled_path_is_checked_against_transfer_limit_and_deadline():
-    # 채운 경로로 조건을 잰다: 규칙 2가 넣은 환승 1회가 상한 0을 넘고, 채운 소요 시간 24분이 시한을 넘는다
+    # 채운 경로로 조건을 잰다: 규칙 2가 넣은 환승 1회가 상한 0을 넘고,
+    # 채운 소요 시간 24분이 시한을 넘는다
     path = [("서울역", 4), ("동대문역사문화공원", 2), ("잠실", 2)]
     over = {**QS["q2"], "max_transfers": 0}
     assert "환승 초과" in grade(REAL, over, Answer(path=path), None).violations
