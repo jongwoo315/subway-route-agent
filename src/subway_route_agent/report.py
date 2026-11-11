@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from itertools import pairwise
 
 from subway_route_agent.answerers import LIMIT_REACHED, Answer
-from subway_route_agent.grade import Grade, path_seconds
+from subway_route_agent.grade import Grade, fill_path, path_seconds
 from subway_route_agent.graph import TRANSFER_SECONDS, Graph
 from subway_route_agent.route import Route
 
@@ -98,7 +98,9 @@ COMPARE_COLUMNS = ["맞음", "채운 역", "답 경로 소요 시간", "답이 �
 def _path_cell(g: Graph, r: Result) -> str:
     if not r.answer.path:
         return "답 없음"
-    actual = path_seconds(g, [tuple(n) for n in r.answer.path])
+    given = [tuple(n) for n in r.answer.path]
+    fill = fill_path(g, given)  # 채점과 같은 경로로 잰다. 못 채우면 답 경로 그대로
+    actual = path_seconds(g, fill[0] if fill else given)
     return "끊김" if actual is None else format_seconds(actual)
 
 

@@ -243,6 +243,19 @@ def test_compare_marks_broken_path_and_empty_answer_and_times(monkeypatch, tmp_p
     assert "good" in text and "- good: 정답률 1/10" in text
 
 
+def test_compare_shows_filled_path_time_not_broken_for_filled_correct_answer(
+    monkeypatch, tmp_path
+):
+    from subway_route_agent.answerers import ANSWERERS
+
+    reports = _fake_answerers(monkeypatch, tmp_path)
+    monkeypatch.setitem(ANSWERERS, "gap", lambda text: Answer(
+        path=[("강남", 2), ("홍대입구", 2)], seconds=1740, raw="g"))
+    assert main(["--answerer", "stub", "gap"]) == 0
+    q1 = _cells((reports / "compare.md").read_text(encoding="utf-8"))["q1"]
+    assert [q1[f"gap {c}"] for c in COMPARE_COLUMNS] == ["O", "16", "29분 0초", "29분 0초"]
+
+
 def test_compare_head_counts_calls_tokens_seconds_match_and_limit(monkeypatch, tmp_path):
     from subway_route_agent import cli
     from subway_route_agent.answerers import ANSWERERS, LIMIT_REACHED
