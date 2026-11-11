@@ -15,8 +15,8 @@ def test_registry_has_stub_and_llm():
     assert list(ANSWERERS) == ["stub", "llm"]
 
 
-def test_questions_file_has_three_questions_with_fields():
+def test_questions_file_has_ten_questions_with_fields():
     qs = json.loads((ROOT / "data" / "questions.json").read_text(encoding="utf-8"))
-    assert [q["id"] for q in qs] == ["q1", "q2", "q3"]
+    assert [q["id"] for q in qs] == [f"q{i}" for i in range(1, 11)]
     for q in qs:
         assert {"text", "origin", "dest", "max_transfers", "depart", "arrive_by"} <= q.keys()

@@ -9,10 +9,10 @@ import openai
 
 from subway_route_agent.answerers import ANSWERERS, MODEL
 from subway_route_agent.data import DATA, ROOT, load_rows
-from subway_route_agent.grade import grade
-from subway_route_agent.graph import build_graph
+from subway_route_agent.grade import _minutes, grade
+from subway_route_agent.graph import ALIASES, Graph, build_graph
 from subway_route_agent.report import Result, render
-from subway_route_agent.route import shortest
+from subway_route_agent.route import Route, shortest
 
 QUESTIONS = ROOT / "data" / "questions.json"
 REPORT_DIR = ROOT / "reports"
@@ -23,6 +23,19 @@ def _write_raw(path: Path, results: list[Result]) -> None:
                    "parse_error": r.answer.parse_error} for r in results}
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(raw, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def _graph_name(station: str) -> str:
+    return ALIASES.get(station, station)
+
+
+def truth_for(g: Graph, q: dict) -> Route | None:
+    """정답. 최단 경로로도 도착 시한을 못 맞추면 정답 없음(None)이다."""
+    route = shortest(g, _graph_name(q["origin"]), _graph_name(q["dest"]), q["max_transfers"])
+    if route and q.get("depart") and q.get("arrive_by"):
+        if _minutes(q["depart"]) * 60 + route.seconds > _minutes(q["arrive_by"]) * 60:
+            return None
+    return route
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -37,10 +50,18 @@ def main(argv: list[str] | None = None) -> int:
 
     g = build_graph(load_rows())
     questions = json.loads(QUESTIONS.read_text(encoding="utf-8"))
+    stations = {n[0] for n in g}
+    missing = [(q["id"], s) for q in questions for s in (q["origin"], q["dest"])
+               if _graph_name(s) not in stations]
+    for qid, station in missing:
+        print(f"질문 {qid}: 그래프에 없는 역 — {station}", file=sys.stderr)
+    if missing:
+        return 2
+
     answer = ANSWERERS[args.answerer]
     results = []
     for q in questions:
-        truth = shortest(g, q["origin"], q["dest"], q["max_transfers"])
+        truth = truth_for(g, q)
         t0 = time.perf_counter()
         try:
             ans = answer(q["text"])  # 답하는 쪽은 문장만 받는다
@@ -50,7 +71,8 @@ def main(argv: list[str] | None = None) -> int:
                 _write_raw(args.raw, results)
             return 1
         ms = (time.perf_counter() - t0) * 1000
-        results.append(Result(q["id"], truth, ans, grade(g, q, ans, truth), ms))
+        results.append(Result(q["id"], truth, ans, grade(g, q, ans, truth), ms,
+                              "hand_seconds" in q))
 
     if args.raw:
         _write_raw(args.raw, results)

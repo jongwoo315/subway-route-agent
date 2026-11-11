@@ -77,3 +77,21 @@ def test_wrong_endpoints():
     ans = Answer(path=[("A", 1), ("B", 1)])
     g = grade(G, q, ans, shortest(G, "A", "C"))
     assert "도착역 다름" in g.violations
+
+
+def test_deadline_needs_both_depart_and_arrive_by():
+    truth = shortest(G, "A", "C", max_transfers=0)  # 660초
+    ans = Answer(path=truth.nodes, seconds=truth.seconds)
+    # 출발 시각만, 도착 시한만 있으면 시한을 잴 수 없다. 지금 동작을 고정한다
+    for kw in ({"depart": "23:59"}, {"arrive_by": "00:01"}):
+        g = grade(G, _q(max_transfers=0, **kw), ans, truth)
+        assert "시한 초과" not in g.violations and g.correct
+
+
+def test_answer_to_question_without_truth_is_answered_but_never_correct():
+    # 정답 없음 질문(truth=None)에 경로를 말하면 답은 했지만 맞을 수 없다. 죽지 않아야 한다
+    path = shortest(G, "A", "C", max_transfers=0).nodes
+    g = grade(G, _q(max_transfers=0), Answer(path=path, seconds=660), None)
+    assert g.answered and not g.correct and g.violations == []
+    g = grade(G, _q(max_transfers=0), Answer(), None)
+    assert not g.answered and not g.correct

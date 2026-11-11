@@ -9,6 +9,18 @@ from subway_route_agent.cli import main
 from subway_route_agent.data import ROOT
 
 
+def use_recorded_questions(monkeypatch, tmp_path, ids):
+    """녹화 fixture에 있는 질문만 든 질문 파일로 바꾼다. 재생은 녹화한 질문 순서대로만 답한다."""
+    from subway_route_agent import cli
+
+    allq = json.loads((ROOT / "data" / "questions.json").read_text("utf-8"))
+    chosen = [q for q in allq if q["id"] in ids]
+    qfile = tmp_path / "recorded_questions.json"
+    qfile.write_text(json.dumps(chosen, ensure_ascii=False), encoding="utf-8")
+    monkeypatch.setattr(cli, "QUESTIONS", qfile)
+    return chosen
+
+
 class FakeClient:
     """output_text와 usage만 가진 응답을 돌려주는 가짜 client. API를 부르지 않는다."""
 
@@ -119,7 +131,7 @@ def test_api_error_exits_1_without_report(monkeypatch, tmp_path, capsys):
 def test_replay_recorded_responses_end_to_end(monkeypatch, tmp_path):
     # tests/fixtures/llm_responses.json에 녹화한 실제 응답 원문을 재생한다. API는 부르지 않는다
     fixture = json.loads((ROOT / "tests" / "fixtures" / "llm_responses.json").read_text("utf-8"))
-    questions = json.loads((ROOT / "data" / "questions.json").read_text("utf-8"))
+    questions = use_recorded_questions(monkeypatch, tmp_path, fixture)
     queue = [fixture[q["id"]] for q in questions]
 
     class Replay:
@@ -152,6 +164,7 @@ def test_replay_recorded_responses_end_to_end(monkeypatch, tmp_path):
 
 def test_replay_with_unreadable_response_marks_row_x_and_counts_failure(monkeypatch, tmp_path):
     fixture = json.loads((ROOT / "tests" / "fixtures" / "llm_responses.json").read_text("utf-8"))
+    use_recorded_questions(monkeypatch, tmp_path, fixture)
     raws = [fixture["q1"]["raw"], "이건 JSON이 아니다", fixture["q3"]["raw"]]
 
     class Replay:
