@@ -11,6 +11,7 @@ from subway_route_agent.answerers import (
     TOOLS_SYSTEM,
     make_llm_tools,
 )
+from subway_route_agent.data import ROOT
 from subway_route_agent.graph import TRANSFER_SECONDS
 from subway_route_agent.tools import TOOLS
 
@@ -153,3 +154,53 @@ def test_registry_has_llm_tools_without_building_client(monkeypatch):
     monkeypatch.setattr(openai, "OpenAI", boom)
     assert list(ANSWERERS) == ["stub", "llm", "llm-tools"]
     assert callable(ANSWERERS["llm-tools"])
+
+
+# ---- 녹화한 응답 재생 (실제 키로 scripts/record_llm_tools.py가 녹화) ----
+
+FIXTURE = ROOT / "tests" / "fixtures" / "llm_tools_responses.json"
+
+
+def to_namespace(obj):
+    if isinstance(obj, dict):
+        return SimpleNamespace(**{k: to_namespace(v) for k, v in obj.items()})
+    if isinstance(obj, list):
+        return [to_namespace(v) for v in obj]
+    return obj
+
+
+def test_replay_recorded_tool_calls_end_to_end(monkeypatch, tmp_path):
+    from subway_route_agent.cli import main
+    from test_llm import use_recorded_questions
+
+    fixture = json.loads(FIXTURE.read_text(encoding="utf-8"))
+    assert list(fixture) == ["q4", "q10"]
+    use_recorded_questions(monkeypatch, tmp_path, list(fixture))
+    queue = [to_namespace(r) for rec in fixture.values() for r in rec["responses"]]
+    seen = []
+
+    class Replay:
+        def __init__(self):
+            self.responses = SimpleNamespace(create=self._create)
+
+        def _create(self, **kwargs):
+            seen.append(kwargs)
+            return queue.pop(0)
+
+    monkeypatch.setenv("OPENAI_API_KEY", "dummy")
+    monkeypatch.setitem(ANSWERERS, "llm-tools", make_llm_tools(Replay()))
+    out, raw = tmp_path / "llm-tools.md", tmp_path / "raw.json"
+    assert main(["--answerer", "llm-tools", "--out", str(out), "--raw", str(raw)]) == 0
+    assert queue == []  # 녹화한 응답을 모두 차례로 썼다
+    text = out.read_text(encoding="utf-8")
+    rows = {line.split(" | ")[0].lstrip("| "): line.split(" | ") for line in text.splitlines()}
+    for qid, rec in fixture.items():
+        assert rows[qid][8] == str(rec["tool_calls"]) and int(rec["tool_calls"]) > 0
+        assert rows[qid][-1].strip(" |") == str(rec["tokens"])
+    assert "- 파싱 실패 0/2" in text
+    # 녹화 때 모델이 부른 도구가 모두 실제 도구 이름이다
+    called = {i.name for r in (to_namespace(r) for rec in fixture.values()
+                               for r in rec["responses"]) for i in r.output
+              if i.type == "function_call"}
+    assert called <= {t["name"] for t in TOOLS}
+    assert json.loads(raw.read_text(encoding="utf-8"))["q10"]["parse_error"] is None
