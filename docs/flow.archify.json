@@ -9,7 +9,7 @@
   "repository": {
    "url": "https://github.com/jongwoo315/subway-route-agent",
    "provider": "github",
-   "revision": "96303a480d023c594e430b567f2b64fe509b5586"
+   "revision": "69c7c96f77ce8f2d0e1bf22792b4fc6c1f420295"
   }
  },
  "lanes": [
@@ -24,6 +24,10 @@
   {
    "id": "answer",
    "label": "답하는 쪽"
+  },
+  {
+   "id": "tool",
+   "label": "도구 셋 — 정보만 준다"
   },
   {
    "id": "grade",
@@ -57,11 +61,11 @@
   {
    "id": "questions",
    "lane": "input",
-   "col": 2,
+   "col": 1,
    "type": "database",
    "label": "questions.json",
-   "sublabel": "[바뀜] 질문 10개, 손 계산 값 8개",
-   "tag": "조건 바뀜",
+   "sublabel": "질문 10개, 손 계산 값 8개",
+   "tag": "그대로",
    "sources": [
     {
      "path": "data/questions.json",
@@ -91,8 +95,8 @@
    "col": 2,
    "type": "backend",
    "label": "shortest",
-   "sublabel": "[바뀜] 시한을 못 맞추면 정답 없음",
-   "tag": "조건 바뀜",
+   "sublabel": "시한을 못 맞추면 정답 없음",
+   "tag": "그대로",
    "sources": [
     {
      "path": "src/subway_route_agent/cli.py",
@@ -109,7 +113,7 @@
   {
    "id": "stub",
    "lane": "answer",
-   "col": 3,
+   "col": 2,
    "type": "frontend",
    "label": "stub",
    "sublabel": "빈 답. 기본값",
@@ -117,8 +121,7 @@
    "sources": [
     {
      "path": "src/subway_route_agent/answerers.py",
-     "line": 18,
-     "label": "stub"
+     "line": 21
     }
    ]
   },
@@ -141,15 +144,15 @@
   {
    "id": "report",
    "lane": "grade",
-   "col": 5,
+   "col": 4,
    "type": "backend",
    "label": "리포트",
-   "sublabel": "[바뀜] 손 계산으로 확인한 정답 K/M 줄",
+   "sublabel": "[바뀜] 도구 호출 열이 실제 값",
    "tag": "조건 바뀜",
    "sources": [
     {
      "path": "src/subway_route_agent/report.py",
-     "line": 47,
+     "line": 48,
      "label": "render"
     }
    ]
@@ -157,7 +160,7 @@
   {
    "id": "llm",
    "lane": "answer",
-   "col": 4,
+   "col": 3,
    "type": "frontend",
    "label": "llm — LLM 혼자",
    "sublabel": "문장만 OpenAI에 묻고 JSON을 읽는다",
@@ -165,29 +168,26 @@
    "sources": [
     {
      "path": "src/subway_route_agent/answerers.py",
-     "line": 78,
-     "label": "make_llm"
+     "line": 81
     },
     {
      "path": "src/subway_route_agent/answerers.py",
-     "line": 29,
-     "label": "SYSTEM"
+     "line": 32
     }
    ]
   },
   {
    "id": "check",
    "lane": "input",
-   "col": 3,
+   "col": 2,
    "type": "security",
    "label": "역 검사",
-   "sublabel": "[새로] 그래프에 없는 역이면 exit 2",
-   "tag": "새로 생김",
+   "sublabel": "그래프에 없는 역이면 exit 2",
+   "tag": "그대로",
    "sources": [
     {
      "path": "src/subway_route_agent/cli.py",
-     "line": 57,
-     "label": "역 검사"
+     "line": 76
     }
    ]
   },
@@ -197,12 +197,67 @@
    "col": 3,
    "type": "database",
    "label": "손 계산 테스트",
-   "sublabel": "[새로] CSV 행만 더해 다익스트라와 맞춘다",
-   "tag": "새로 생김",
+   "sublabel": "CSV 행만 더해 다익스트라와 맞춘다",
+   "tag": "그대로",
    "sources": [
     {
      "path": "tests/test_route.py",
      "line": 1
+    }
+   ]
+  },
+  {
+   "id": "llmt",
+   "lane": "answer",
+   "col": 4,
+   "type": "frontend",
+   "label": "llm-tools — LLM + 도구",
+   "sublabel": "[새로] 도구를 불러 가며 답한다",
+   "tag": "새로 생김",
+   "sources": [
+    {
+     "path": "src/subway_route_agent/answerers.py",
+     "line": 122,
+     "label": "make_llm_tools"
+    },
+    {
+     "path": "src/subway_route_agent/answerers.py",
+     "line": 111
+    }
+   ]
+  },
+  {
+   "id": "tools",
+   "lane": "tool",
+   "col": 4,
+   "type": "backend",
+   "label": "도구 셋 3개",
+   "sublabel": "[새로] 역·호선 구간·한 호선 안 시간",
+   "tag": "새로 생김",
+   "sources": [
+    {
+     "path": "src/subway_route_agent/tools.py",
+     "line": 28
+    },
+    {
+     "path": "src/subway_route_agent/tools.py",
+     "line": 58
+    }
+   ]
+  },
+  {
+   "id": "compare",
+   "lane": "grade",
+   "col": 5,
+   "type": "security",
+   "label": "비교 리포트",
+   "sublabel": "[새로] 질문마다 한 줄에 나란히",
+   "tag": "새로 생김",
+   "sources": [
+    {
+     "path": "src/subway_route_agent/report.py",
+     "line": 104,
+     "label": "render_compare"
     }
    ]
   }
@@ -269,6 +324,30 @@
    "from": "route",
    "to": "hand",
    "label": "테스트에서 비교"
+  },
+  {
+   "id": "h1",
+   "from": "check",
+   "to": "llmt",
+   "label": "문장만 (--answerer llm-tools)"
+  },
+  {
+   "id": "h2",
+   "from": "llmt",
+   "to": "tools",
+   "label": "도구 호출 ↔ 결과"
+  },
+  {
+   "id": "h4",
+   "from": "llmt",
+   "to": "grade",
+   "label": "답"
+  },
+  {
+   "id": "h5",
+   "from": "report",
+   "to": "compare",
+   "label": "둘 이상이면"
   }
  ],
  "cards": [
@@ -276,8 +355,9 @@
    "dot": "cyan",
    "title": "읽는 법",
    "items": [
-    "[새로]·[바뀜]은 PR #2 대비 이번 PR #3이 바꾼 단계다",
-    "손 계산 테스트는 실행 흐름이 아니라 테스트에서만 돈다"
+    "[새로]·[바뀜]은 PR #3 대비 이번 PR #4가 바꾼 단계다",
+    "손 계산 테스트는 실행 흐름이 아니라 테스트에서만 돈다",
+    "명령 하나(--answerer stub llm llm-tools)로 세 답하는 쪽이 같은 질문 10개에 답한다"
    ]
   }
  ]
