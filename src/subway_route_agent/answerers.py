@@ -4,6 +4,9 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from functools import cache
 
+from subway_route_agent.graph import TRANSFER_SECONDS
+from subway_route_agent.tools import TOOLS, call_tool
+
 
 @dataclass
 class Answer:
@@ -18,7 +21,7 @@ class Answer:
 def stub(question_text: str) -> Answer:
     """LLM 없이 고정된 답. 모든 질문에 빈 답을 돌려준다.
 
-    키 없이 끝까지 도는 기본 답하는 쪽이다. LLM 혼자는 `llm`, LLM + 도구는 다음 티켓에서 더한다.
+    키 없이 끝까지 도는 기본 답하는 쪽이다. LLM 혼자는 `llm`, LLM + 도구는 `llm-tools`가 맡는다.
     """
     return Answer()
 
@@ -105,9 +108,73 @@ def make_llm(client=None) -> Callable[[str], Answer]:
     return llm
 
 
+TOOL_CALL_LIMIT = 25
+LIMIT_REACHED = f"도구 호출 상한({TOOL_CALL_LIMIT})에 닿았다"  # 리포트가 이 문자열로 센다
+
+# LLM + 도구: 답 형식 설명은 SYSTEM 그대로. 역 목록·정답·질문별 힌트는 넣지 않는다
+TOOLS_SYSTEM = (
+    SYSTEM
+    + " 도구로 역·노선·한 호선 안 소요 시간을 확인할 수 있다."
+    + f" 환승 한 번은 {TRANSFER_SECONDS}초다. 경로는 직접 고른다."
+)
+
+
+def make_llm_tools(client=None) -> Callable[[str], Answer]:
+    """질문 문장과 도구 셋을 LLM에 주고, 도구 호출이 없는 응답이 올 때까지 되풀이하는 답하는 쪽."""
+    if client is None:
+        import openai
+
+        client = openai.OpenAI()
+
+    def llm_tools(question_text: str) -> Answer:
+        items: list = [{"role": "user", "content": question_text}]
+        tokens = tool_calls = 0
+        while True:
+            resp = client.responses.create(
+                model=MODEL,
+                instructions=TOOLS_SYSTEM,
+                input=items,
+                tools=TOOLS,
+                text={"format": {"type": "json_schema", "name": "route", "schema": SCHEMA,
+                                 "strict": True}},
+            )
+            usage = resp.usage
+            tokens += usage.input_tokens + usage.output_tokens if usage else 0
+            calls = [i for i in resp.output if i.type == "function_call"]
+            if not calls:
+                break
+            items.extend(resp.output)
+            for c in calls:
+                if tool_calls >= TOOL_CALL_LIMIT:
+                    return Answer(
+                        parse_error=LIMIT_REACHED,
+                        tool_calls=tool_calls, tokens=tokens, raw=resp.output_text,
+                    )
+                tool_calls += 1
+                items.append({"type": "function_call_output", "call_id": c.call_id,
+                              "output": call_tool(c.name, c.arguments)})
+        raw = resp.output_text
+        status = getattr(resp, "status", "completed")
+        if status != "completed":  # 거절·토큰 한도로 끊긴 응답은 JSON 오류와 구분한다
+            return Answer(parse_error=f"응답이 끝나지 않았다({status})", raw=raw,
+                          tokens=tokens, tool_calls=tool_calls)
+        try:
+            path, seconds = _parse(raw)
+        except ValueError as e:
+            return Answer(parse_error=str(e), raw=raw, tokens=tokens, tool_calls=tool_calls)
+        return Answer(path=path, seconds=seconds, raw=raw, tokens=tokens, tool_calls=tool_calls)
+
+    return llm_tools
+
+
 @cache
 def _llm() -> Callable[[str], Answer]:
     return make_llm()
+
+
+@cache
+def _llm_tools() -> Callable[[str], Answer]:
+    return make_llm_tools()
 
 
 # 답하는 쪽은 질문 문장만 받는다. 구조화된 필드는 채점만 쓴다.
@@ -115,4 +182,5 @@ def _llm() -> Callable[[str], Answer]:
 ANSWERERS: dict[str, Callable[[str], Answer]] = {
     "stub": stub,
     "llm": lambda text: _llm()(text),
+    "llm-tools": lambda text: _llm_tools()(text),
 }

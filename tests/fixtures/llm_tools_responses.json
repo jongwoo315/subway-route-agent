@@ -1,0 +1,1990 @@
+{
+  "q4": {
+    "responses": [
+      {
+        "id": "resp_0187bd931aaddb4e006af4506ce36487d2bb039c50281fefc7",
+        "access_programs": null,
+        "created_at": 1794396268.0,
+        "error": null,
+        "incomplete_details": null,
+        "instructions": "서울 지하철 1~8호선만 써서 질문에 답한다. 출발역부터 도착역까지 지나는 역을 빠짐없이 순서대로 path에 쓰고, 역마다 그 구간에서 탄 호선 번호(1~8)를 line에 쓴다. 갈아타는 역은 내리는 호선으로 한 번, 타는 호선으로 한 번, 같은 역을 두 번 쓴다. seconds는 전체 소요 시간을 초 단위 정수로 쓴다. 모르면 null이다. 도구로 역·노선·한 호선 안 소요 시간을 확인할 수 있다. 환승 한 번은 180초다. 경로는 직접 고른다.",
+        "metadata": {},
+        "model": "gpt-5.4-mini-2026-03-17",
+        "object": "response",
+        "output": [
+          {
+            "arguments": "{\"name\":\"홍대입구\"}",
+            "call_id": "call_n9JyD5NLGIMXLgnaU4zWPALx",
+            "name": "find_station",
+            "type": "function_call",
+            "id": "fc_0187bd931aaddb4e006af4506e056487d28d5abe3a7d72bccc",
+            "async_": null,
+            "caller": null,
+            "namespace": null,
+            "status": "completed"
+          },
+          {
+            "arguments": "{\"name\":\"서울역\"}",
+            "call_id": "call_VlSjBHKfgaaEuhu9xFya0CfC",
+            "name": "find_station",
+            "type": "function_call",
+            "id": "fc_0187bd931aaddb4e006af4506e057487d29d1466766f699c4e",
+            "async_": null,
+            "caller": null,
+            "namespace": null,
+            "status": "completed"
+          }
+        ],
+        "parallel_tool_calls": true,
+        "temperature": 1.0,
+        "tool_choice": "auto",
+        "tools": [
+          {
+            "name": "find_station",
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "name"
+              ],
+              "additionalProperties": false
+            },
+            "strict": true,
+            "type": "function",
+            "allowed_callers": null,
+            "async_": null,
+            "defer_loading": null,
+            "description": "역 이름으로 그 역을 지나는 호선 목록을 돌려준다. 없는 이름이면 이름에 그 글자가 들어간 역 후보를 돌려준다.",
+            "output_schema": null
+          },
+          {
+            "name": "line_stations",
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "line": {
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "line"
+              ],
+              "additionalProperties": false
+            },
+            "strict": true,
+            "type": "function",
+            "allowed_callers": null,
+            "async_": null,
+            "defer_loading": null,
+            "description": "호선 하나의 구간 목록을 돌려준다. 구간마다 출발 역, 도착 역, 소요 시간(초), 한 방향으로만 가는 구간인지가 들어 있다.",
+            "output_schema": null
+          },
+          {
+            "name": "travel_seconds",
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "line": {
+                  "type": "integer"
+                },
+                "from_station": {
+                  "type": "string"
+                },
+                "to_station": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "line",
+                "from_station",
+                "to_station"
+              ],
+              "additionalProperties": false
+            },
+            "strict": true,
+            "type": "function",
+            "allowed_callers": null,
+            "async_": null,
+            "defer_loading": null,
+            "description": "한 호선 안에서 갈아타지 않고 두 역 사이를 갈 때의 소요 시간(초)을 돌려준다. 두 역이 그 호선에 없으면 오류를 돌려준다.",
+            "output_schema": null
+          }
+        ],
+        "top_p": 0.98,
+        "background": false,
+        "completed_at": 1794396270.0,
+        "conversation": null,
+        "image": {
+          "context_compression": "disabled"
+        },
+        "max_output_tokens": null,
+        "max_tool_calls": null,
+        "moderation": null,
+        "previous_response_id": null,
+        "prompt": null,
+        "prompt_cache_diagnostics": null,
+        "prompt_cache_key": null,
+        "prompt_cache_options": null,
+        "prompt_cache_retention": "24h",
+        "reasoning": {
+          "context": "current_turn",
+          "effort": "none",
+          "generate_summary": null,
+          "mode": "standard",
+          "summary": null
+        },
+        "safety_identifier": null,
+        "service_tier": "default",
+        "status": "completed",
+        "text": {
+          "format": {
+            "name": "route",
+            "schema_": {
+              "type": "object",
+              "properties": {
+                "path": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "station": {
+                        "type": "string"
+                      },
+                      "line": {
+                        "type": "integer"
+                      }
+                    },
+                    "required": [
+                      "station",
+                      "line"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "seconds": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "path",
+                "seconds"
+              ],
+              "additionalProperties": false
+            },
+            "type": "json_schema",
+            "description": null,
+            "strict": true
+          },
+          "verbosity": "medium"
+        },
+        "tool_usage": {
+          "image_gen": {
+            "input_tokens": 0,
+            "input_tokens_details": {
+              "image_tokens": 0,
+              "text_tokens": 0
+            },
+            "output_tokens": 0,
+            "total_tokens": 0,
+            "cached_tokens": null,
+            "cached_tokens_details": null,
+            "output_tokens_details": {
+              "image_tokens": 0,
+              "text_tokens": 0
+            }
+          },
+          "web_search": {
+            "num_requests": 0
+          }
+        },
+        "top_logprobs": 0,
+        "truncation": "disabled",
+        "usage": {
+          "input_tokens": 429,
+          "input_tokens_details": {
+            "cache_write_tokens": 0,
+            "cached_tokens": 0,
+            "cache_write_tokens_details": null
+          },
+          "output_tokens": 52,
+          "output_tokens_details": {
+            "reasoning_tokens": 0
+          },
+          "total_tokens": 481
+        },
+        "user": null,
+        "billing": {
+          "payer": "developer"
+        },
+        "frequency_penalty": 0.0,
+        "presence_penalty": 0.0,
+        "store": true,
+        "output_text": ""
+      },
+      {
+        "id": "resp_0187bd931aaddb4e006af4506f772c87d2a727d1f32bd15916",
+        "access_programs": null,
+        "created_at": 1794396271.0,
+        "error": null,
+        "incomplete_details": null,
+        "instructions": "서울 지하철 1~8호선만 써서 질문에 답한다. 출발역부터 도착역까지 지나는 역을 빠짐없이 순서대로 path에 쓰고, 역마다 그 구간에서 탄 호선 번호(1~8)를 line에 쓴다. 갈아타는 역은 내리는 호선으로 한 번, 타는 호선으로 한 번, 같은 역을 두 번 쓴다. seconds는 전체 소요 시간을 초 단위 정수로 쓴다. 모르면 null이다. 도구로 역·노선·한 호선 안 소요 시간을 확인할 수 있다. 환승 한 번은 180초다. 경로는 직접 고른다.",
+        "metadata": {},
+        "model": "gpt-5.4-mini-2026-03-17",
+        "object": "response",
+        "output": [
+          {
+            "arguments": "{\"line\":2}",
+            "call_id": "call_UkNPafTrEqzLGFKacAiHckOY",
+            "name": "line_stations",
+            "type": "function_call",
+            "id": "fc_0187bd931aaddb4e006af450702d5c87d287cbaf31de1e073d",
+            "async_": null,
+            "caller": null,
+            "namespace": null,
+            "status": "completed"
+          }
+        ],
+        "parallel_tool_calls": true,
+        "temperature": 1.0,
+        "tool_choice": "auto",
+        "tools": [
+          {
+            "name": "find_station",
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "name"
+              ],
+              "additionalProperties": false
+            },
+            "strict": true,
+            "type": "function",
+            "allowed_callers": null,
+            "async_": null,
+            "defer_loading": null,
+            "description": "역 이름으로 그 역을 지나는 호선 목록을 돌려준다. 없는 이름이면 이름에 그 글자가 들어간 역 후보를 돌려준다.",
+            "output_schema": null
+          },
+          {
+            "name": "line_stations",
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "line": {
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "line"
+              ],
+              "additionalProperties": false
+            },
+            "strict": true,
+            "type": "function",
+            "allowed_callers": null,
+            "async_": null,
+            "defer_loading": null,
+            "description": "호선 하나의 구간 목록을 돌려준다. 구간마다 출발 역, 도착 역, 소요 시간(초), 한 방향으로만 가는 구간인지가 들어 있다.",
+            "output_schema": null
+          },
+          {
+            "name": "travel_seconds",
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "line": {
+                  "type": "integer"
+                },
+                "from_station": {
+                  "type": "string"
+                },
+                "to_station": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "line",
+                "from_station",
+                "to_station"
+              ],
+              "additionalProperties": false
+            },
+            "strict": true,
+            "type": "function",
+            "allowed_callers": null,
+            "async_": null,
+            "defer_loading": null,
+            "description": "한 호선 안에서 갈아타지 않고 두 역 사이를 갈 때의 소요 시간(초)을 돌려준다. 두 역이 그 호선에 없으면 오류를 돌려준다.",
+            "output_schema": null
+          }
+        ],
+        "top_p": 0.98,
+        "background": false,
+        "completed_at": 1794396272.0,
+        "conversation": null,
+        "image": {
+          "context_compression": "disabled"
+        },
+        "max_output_tokens": null,
+        "max_tool_calls": null,
+        "moderation": null,
+        "previous_response_id": null,
+        "prompt": null,
+        "prompt_cache_diagnostics": null,
+        "prompt_cache_key": null,
+        "prompt_cache_options": null,
+        "prompt_cache_retention": "24h",
+        "reasoning": {
+          "context": "current_turn",
+          "effort": "none",
+          "generate_summary": null,
+          "mode": "standard",
+          "summary": null
+        },
+        "safety_identifier": null,
+        "service_tier": "default",
+        "status": "completed",
+        "text": {
+          "format": {
+            "name": "route",
+            "schema_": {
+              "type": "object",
+              "properties": {
+                "path": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "station": {
+                        "type": "string"
+                      },
+                      "line": {
+                        "type": "integer"
+                      }
+                    },
+                    "required": [
+                      "station",
+                      "line"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "seconds": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "path",
+                "seconds"
+              ],
+              "additionalProperties": false
+            },
+            "type": "json_schema",
+            "description": null,
+            "strict": true
+          },
+          "verbosity": "medium"
+        },
+        "tool_usage": {
+          "image_gen": {
+            "input_tokens": 0,
+            "input_tokens_details": {
+              "image_tokens": 0,
+              "text_tokens": 0
+            },
+            "output_tokens": 0,
+            "total_tokens": 0,
+            "cached_tokens": null,
+            "cached_tokens_details": null,
+            "output_tokens_details": {
+              "image_tokens": 0,
+              "text_tokens": 0
+            }
+          },
+          "web_search": {
+            "num_requests": 0
+          }
+        },
+        "top_logprobs": 0,
+        "truncation": "disabled",
+        "usage": {
+          "input_tokens": 542,
+          "input_tokens_details": {
+            "cache_write_tokens": 0,
+            "cached_tokens": 0,
+            "cache_write_tokens_details": null
+          },
+          "output_tokens": 19,
+          "output_tokens_details": {
+            "reasoning_tokens": 0
+          },
+          "total_tokens": 561
+        },
+        "user": null,
+        "billing": {
+          "payer": "developer"
+        },
+        "frequency_penalty": 0.0,
+        "presence_penalty": 0.0,
+        "store": true,
+        "output_text": ""
+      },
+      {
+        "id": "resp_0187bd931aaddb4e006af45071211887d299edae5e3c978838",
+        "access_programs": null,
+        "created_at": 1794396273.0,
+        "error": null,
+        "incomplete_details": null,
+        "instructions": "서울 지하철 1~8호선만 써서 질문에 답한다. 출발역부터 도착역까지 지나는 역을 빠짐없이 순서대로 path에 쓰고, 역마다 그 구간에서 탄 호선 번호(1~8)를 line에 쓴다. 갈아타는 역은 내리는 호선으로 한 번, 타는 호선으로 한 번, 같은 역을 두 번 쓴다. seconds는 전체 소요 시간을 초 단위 정수로 쓴다. 모르면 null이다. 도구로 역·노선·한 호선 안 소요 시간을 확인할 수 있다. 환승 한 번은 180초다. 경로는 직접 고른다.",
+        "metadata": {},
+        "model": "gpt-5.4-mini-2026-03-17",
+        "object": "response",
+        "output": [
+          {
+            "arguments": "{\"line\":2,\"from_station\":\"홍대입구\",\"to_station\":\"시청\"}",
+            "call_id": "call_iPwbKyT2Aqm8r4T6Ud02YNBZ",
+            "name": "travel_seconds",
+            "type": "function_call",
+            "id": "fc_0187bd931aaddb4e006af45071d6dc87d291d36d9327850335",
+            "async_": null,
+            "caller": null,
+            "namespace": null,
+            "status": "completed"
+          },
+          {
+            "arguments": "{\"line\":2,\"from_station\":\"홍대입구\",\"to_station\":\"충정로\"}",
+            "call_id": "call_b1mRfRi3c2w17zETTB7iEkHU",
+            "name": "travel_seconds",
+            "type": "function_call",
+            "id": "fc_0187bd931aaddb4e006af45071d6f087d2b1a7b8383ec6a587",
+            "async_": null,
+            "caller": null,
+            "namespace": null,
+            "status": "completed"
+          }
+        ],
+        "parallel_tool_calls": true,
+        "temperature": 1.0,
+        "tool_choice": "auto",
+        "tools": [
+          {
+            "name": "find_station",
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "name"
+              ],
+              "additionalProperties": false
+            },
+            "strict": true,
+            "type": "function",
+            "allowed_callers": null,
+            "async_": null,
+            "defer_loading": null,
+            "description": "역 이름으로 그 역을 지나는 호선 목록을 돌려준다. 없는 이름이면 이름에 그 글자가 들어간 역 후보를 돌려준다.",
+            "output_schema": null
+          },
+          {
+            "name": "line_stations",
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "line": {
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "line"
+              ],
+              "additionalProperties": false
+            },
+            "strict": true,
+            "type": "function",
+            "allowed_callers": null,
+            "async_": null,
+            "defer_loading": null,
+            "description": "호선 하나의 구간 목록을 돌려준다. 구간마다 출발 역, 도착 역, 소요 시간(초), 한 방향으로만 가는 구간인지가 들어 있다.",
+            "output_schema": null
+          },
+          {
+            "name": "travel_seconds",
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "line": {
+                  "type": "integer"
+                },
+                "from_station": {
+                  "type": "string"
+                },
+                "to_station": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "line",
+                "from_station",
+                "to_station"
+              ],
+              "additionalProperties": false
+            },
+            "strict": true,
+            "type": "function",
+            "allowed_callers": null,
+            "async_": null,
+            "defer_loading": null,
+            "description": "한 호선 안에서 갈아타지 않고 두 역 사이를 갈 때의 소요 시간(초)을 돌려준다. 두 역이 그 호선에 없으면 오류를 돌려준다.",
+            "output_schema": null
+          }
+        ],
+        "top_p": 0.98,
+        "background": false,
+        "completed_at": 1794396274.0,
+        "conversation": null,
+        "image": {
+          "context_compression": "disabled"
+        },
+        "max_output_tokens": null,
+        "max_tool_calls": null,
+        "moderation": null,
+        "previous_response_id": null,
+        "prompt": null,
+        "prompt_cache_diagnostics": null,
+        "prompt_cache_key": null,
+        "prompt_cache_options": null,
+        "prompt_cache_retention": "24h",
+        "reasoning": {
+          "context": "current_turn",
+          "effort": "none",
+          "generate_summary": null,
+          "mode": "standard",
+          "summary": null
+        },
+        "safety_identifier": null,
+        "service_tier": "default",
+        "status": "completed",
+        "text": {
+          "format": {
+            "name": "route",
+            "schema_": {
+              "type": "object",
+              "properties": {
+                "path": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "station": {
+                        "type": "string"
+                      },
+                      "line": {
+                        "type": "integer"
+                      }
+                    },
+                    "required": [
+                      "station",
+                      "line"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "seconds": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "path",
+                "seconds"
+              ],
+              "additionalProperties": false
+            },
+            "type": "json_schema",
+            "description": null,
+            "strict": true
+          },
+          "verbosity": "medium"
+        },
+        "tool_usage": {
+          "image_gen": {
+            "input_tokens": 0,
+            "input_tokens_details": {
+              "image_tokens": 0,
+              "text_tokens": 0
+            },
+            "output_tokens": 0,
+            "total_tokens": 0,
+            "cached_tokens": null,
+            "cached_tokens_details": null,
+            "output_tokens_details": {
+              "image_tokens": 0,
+              "text_tokens": 0
+            }
+          },
+          "web_search": {
+            "num_requests": 0
+          }
+        },
+        "top_logprobs": 0,
+        "truncation": "disabled",
+        "usage": {
+          "input_tokens": 2016,
+          "input_tokens_details": {
+            "cache_write_tokens": 0,
+            "cached_tokens": 0,
+            "cache_write_tokens_details": null
+          },
+          "output_tokens": 77,
+          "output_tokens_details": {
+            "reasoning_tokens": 0
+          },
+          "total_tokens": 2093
+        },
+        "user": null,
+        "billing": {
+          "payer": "developer"
+        },
+        "frequency_penalty": 0.0,
+        "presence_penalty": 0.0,
+        "store": true,
+        "output_text": ""
+      },
+      {
+        "id": "resp_0187bd931aaddb4e006af45073395c87d2a12d0827f632eec8",
+        "access_programs": null,
+        "created_at": 1794396275.0,
+        "error": null,
+        "incomplete_details": null,
+        "instructions": "서울 지하철 1~8호선만 써서 질문에 답한다. 출발역부터 도착역까지 지나는 역을 빠짐없이 순서대로 path에 쓰고, 역마다 그 구간에서 탄 호선 번호(1~8)를 line에 쓴다. 갈아타는 역은 내리는 호선으로 한 번, 타는 호선으로 한 번, 같은 역을 두 번 쓴다. seconds는 전체 소요 시간을 초 단위 정수로 쓴다. 모르면 null이다. 도구로 역·노선·한 호선 안 소요 시간을 확인할 수 있다. 환승 한 번은 180초다. 경로는 직접 고른다.",
+        "metadata": {},
+        "model": "gpt-5.4-mini-2026-03-17",
+        "object": "response",
+        "output": [
+          {
+            "arguments": "{\"line\":1}",
+            "call_id": "call_XgGyUbyA5C391DiMH7ub3QOG",
+            "name": "line_stations",
+            "type": "function_call",
+            "id": "fc_0187bd931aaddb4e006af450742e5487d28b5e080f84e4ddd9",
+            "async_": null,
+            "caller": null,
+            "namespace": null,
+            "status": "completed"
+          }
+        ],
+        "parallel_tool_calls": true,
+        "temperature": 1.0,
+        "tool_choice": "auto",
+        "tools": [
+          {
+            "name": "find_station",
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "name"
+              ],
+              "additionalProperties": false
+            },
+            "strict": true,
+            "type": "function",
+            "allowed_callers": null,
+            "async_": null,
+            "defer_loading": null,
+            "description": "역 이름으로 그 역을 지나는 호선 목록을 돌려준다. 없는 이름이면 이름에 그 글자가 들어간 역 후보를 돌려준다.",
+            "output_schema": null
+          },
+          {
+            "name": "line_stations",
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "line": {
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "line"
+              ],
+              "additionalProperties": false
+            },
+            "strict": true,
+            "type": "function",
+            "allowed_callers": null,
+            "async_": null,
+            "defer_loading": null,
+            "description": "호선 하나의 구간 목록을 돌려준다. 구간마다 출발 역, 도착 역, 소요 시간(초), 한 방향으로만 가는 구간인지가 들어 있다.",
+            "output_schema": null
+          },
+          {
+            "name": "travel_seconds",
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "line": {
+                  "type": "integer"
+                },
+                "from_station": {
+                  "type": "string"
+                },
+                "to_station": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "line",
+                "from_station",
+                "to_station"
+              ],
+              "additionalProperties": false
+            },
+            "strict": true,
+            "type": "function",
+            "allowed_callers": null,
+            "async_": null,
+            "defer_loading": null,
+            "description": "한 호선 안에서 갈아타지 않고 두 역 사이를 갈 때의 소요 시간(초)을 돌려준다. 두 역이 그 호선에 없으면 오류를 돌려준다.",
+            "output_schema": null
+          }
+        ],
+        "top_p": 0.98,
+        "background": false,
+        "completed_at": 1794396276.0,
+        "conversation": null,
+        "image": {
+          "context_compression": "disabled"
+        },
+        "max_output_tokens": null,
+        "max_tool_calls": null,
+        "moderation": null,
+        "previous_response_id": null,
+        "prompt": null,
+        "prompt_cache_diagnostics": null,
+        "prompt_cache_key": null,
+        "prompt_cache_options": null,
+        "prompt_cache_retention": "24h",
+        "reasoning": {
+          "context": "current_turn",
+          "effort": "none",
+          "generate_summary": null,
+          "mode": "standard",
+          "summary": null
+        },
+        "safety_identifier": null,
+        "service_tier": "default",
+        "status": "completed",
+        "text": {
+          "format": {
+            "name": "route",
+            "schema_": {
+              "type": "object",
+              "properties": {
+                "path": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "station": {
+                        "type": "string"
+                      },
+                      "line": {
+                        "type": "integer"
+                      }
+                    },
+                    "required": [
+                      "station",
+                      "line"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "seconds": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "path",
+                "seconds"
+              ],
+              "additionalProperties": false
+            },
+            "type": "json_schema",
+            "description": null,
+            "strict": true
+          },
+          "verbosity": "medium"
+        },
+        "tool_usage": {
+          "image_gen": {
+            "input_tokens": 0,
+            "input_tokens_details": {
+              "image_tokens": 0,
+              "text_tokens": 0
+            },
+            "output_tokens": 0,
+            "total_tokens": 0,
+            "cached_tokens": null,
+            "cached_tokens_details": null,
+            "output_tokens_details": {
+              "image_tokens": 0,
+              "text_tokens": 0
+            }
+          },
+          "web_search": {
+            "num_requests": 0
+          }
+        },
+        "top_logprobs": 0,
+        "truncation": "disabled",
+        "usage": {
+          "input_tokens": 2125,
+          "input_tokens_details": {
+            "cache_write_tokens": 0,
+            "cached_tokens": 1920,
+            "cache_write_tokens_details": null
+          },
+          "output_tokens": 19,
+          "output_tokens_details": {
+            "reasoning_tokens": 0
+          },
+          "total_tokens": 2144
+        },
+        "user": null,
+        "billing": {
+          "payer": "developer"
+        },
+        "frequency_penalty": 0.0,
+        "presence_penalty": 0.0,
+        "store": true,
+        "output_text": ""
+      },
+      {
+        "id": "resp_0187bd931aaddb4e006af450755d6087d2b11587dcc62f70c7",
+        "access_programs": null,
+        "created_at": 1794396277.0,
+        "error": null,
+        "incomplete_details": null,
+        "instructions": "서울 지하철 1~8호선만 써서 질문에 답한다. 출발역부터 도착역까지 지나는 역을 빠짐없이 순서대로 path에 쓰고, 역마다 그 구간에서 탄 호선 번호(1~8)를 line에 쓴다. 갈아타는 역은 내리는 호선으로 한 번, 타는 호선으로 한 번, 같은 역을 두 번 쓴다. seconds는 전체 소요 시간을 초 단위 정수로 쓴다. 모르면 null이다. 도구로 역·노선·한 호선 안 소요 시간을 확인할 수 있다. 환승 한 번은 180초다. 경로는 직접 고른다.",
+        "metadata": {},
+        "model": "gpt-5.4-mini-2026-03-17",
+        "object": "response",
+        "output": [
+          {
+            "id": "msg_0187bd931aaddb4e006af45075f56887d2b1d0805c7bb65c77",
+            "content": [
+              {
+                "annotations": [],
+                "text": "{\"path\":[{\"station\":\"홍대입구\",\"line\":2},{\"station\":\"충정로\",\"line\":2},{\"station\":\"충정로\",\"line\":1},{\"station\":\"서울역\",\"line\":1}],\"seconds\":510}",
+                "type": "output_text",
+                "logprobs": []
+              }
+            ],
+            "role": "assistant",
+            "status": "completed",
+            "type": "message",
+            "phase": "final_answer"
+          }
+        ],
+        "parallel_tool_calls": true,
+        "temperature": 1.0,
+        "tool_choice": "auto",
+        "tools": [
+          {
+            "name": "find_station",
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "name"
+              ],
+              "additionalProperties": false
+            },
+            "strict": true,
+            "type": "function",
+            "allowed_callers": null,
+            "async_": null,
+            "defer_loading": null,
+            "description": "역 이름으로 그 역을 지나는 호선 목록을 돌려준다. 없는 이름이면 이름에 그 글자가 들어간 역 후보를 돌려준다.",
+            "output_schema": null
+          },
+          {
+            "name": "line_stations",
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "line": {
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "line"
+              ],
+              "additionalProperties": false
+            },
+            "strict": true,
+            "type": "function",
+            "allowed_callers": null,
+            "async_": null,
+            "defer_loading": null,
+            "description": "호선 하나의 구간 목록을 돌려준다. 구간마다 출발 역, 도착 역, 소요 시간(초), 한 방향으로만 가는 구간인지가 들어 있다.",
+            "output_schema": null
+          },
+          {
+            "name": "travel_seconds",
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "line": {
+                  "type": "integer"
+                },
+                "from_station": {
+                  "type": "string"
+                },
+                "to_station": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "line",
+                "from_station",
+                "to_station"
+              ],
+              "additionalProperties": false
+            },
+            "strict": true,
+            "type": "function",
+            "allowed_callers": null,
+            "async_": null,
+            "defer_loading": null,
+            "description": "한 호선 안에서 갈아타지 않고 두 역 사이를 갈 때의 소요 시간(초)을 돌려준다. 두 역이 그 호선에 없으면 오류를 돌려준다.",
+            "output_schema": null
+          }
+        ],
+        "top_p": 0.98,
+        "background": false,
+        "completed_at": 1794396278.0,
+        "conversation": null,
+        "image": {
+          "context_compression": "disabled"
+        },
+        "max_output_tokens": null,
+        "max_tool_calls": null,
+        "moderation": null,
+        "previous_response_id": null,
+        "prompt": null,
+        "prompt_cache_diagnostics": null,
+        "prompt_cache_key": null,
+        "prompt_cache_options": null,
+        "prompt_cache_retention": "24h",
+        "reasoning": {
+          "context": "current_turn",
+          "effort": "none",
+          "generate_summary": null,
+          "mode": "standard",
+          "summary": null
+        },
+        "safety_identifier": null,
+        "service_tier": "default",
+        "status": "completed",
+        "text": {
+          "format": {
+            "name": "route",
+            "schema_": {
+              "type": "object",
+              "properties": {
+                "path": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "station": {
+                        "type": "string"
+                      },
+                      "line": {
+                        "type": "integer"
+                      }
+                    },
+                    "required": [
+                      "station",
+                      "line"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "seconds": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "path",
+                "seconds"
+              ],
+              "additionalProperties": false
+            },
+            "type": "json_schema",
+            "description": null,
+            "strict": true
+          },
+          "verbosity": "medium"
+        },
+        "tool_usage": {
+          "image_gen": {
+            "input_tokens": 0,
+            "input_tokens_details": {
+              "image_tokens": 0,
+              "text_tokens": 0
+            },
+            "output_tokens": 0,
+            "total_tokens": 0,
+            "cached_tokens": null,
+            "cached_tokens_details": null,
+            "output_tokens_details": {
+              "image_tokens": 0,
+              "text_tokens": 0
+            }
+          },
+          "web_search": {
+            "num_requests": 0
+          }
+        },
+        "top_logprobs": 0,
+        "truncation": "disabled",
+        "usage": {
+          "input_tokens": 2419,
+          "input_tokens_details": {
+            "cache_write_tokens": 0,
+            "cached_tokens": 2048,
+            "cache_write_tokens_details": null
+          },
+          "output_tokens": 56,
+          "output_tokens_details": {
+            "reasoning_tokens": 0
+          },
+          "total_tokens": 2475
+        },
+        "user": null,
+        "billing": {
+          "payer": "developer"
+        },
+        "frequency_penalty": 0.0,
+        "presence_penalty": 0.0,
+        "store": true,
+        "output_text": "{\"path\":[{\"station\":\"홍대입구\",\"line\":2},{\"station\":\"충정로\",\"line\":2},{\"station\":\"충정로\",\"line\":1},{\"station\":\"서울역\",\"line\":1}],\"seconds\":510}"
+      }
+    ],
+    "tool_calls": 6,
+    "tokens": 7754,
+    "parse_error": null
+  },
+  "q10": {
+    "responses": [
+      {
+        "id": "resp_040b517b038e6162006af45077bef487d289aebc8cbc0c86de",
+        "access_programs": null,
+        "created_at": 1794396279.0,
+        "error": null,
+        "incomplete_details": null,
+        "instructions": "서울 지하철 1~8호선만 써서 질문에 답한다. 출발역부터 도착역까지 지나는 역을 빠짐없이 순서대로 path에 쓰고, 역마다 그 구간에서 탄 호선 번호(1~8)를 line에 쓴다. 갈아타는 역은 내리는 호선으로 한 번, 타는 호선으로 한 번, 같은 역을 두 번 쓴다. seconds는 전체 소요 시간을 초 단위 정수로 쓴다. 모르면 null이다. 도구로 역·노선·한 호선 안 소요 시간을 확인할 수 있다. 환승 한 번은 180초다. 경로는 직접 고른다.",
+        "metadata": {},
+        "model": "gpt-5.4-mini-2026-03-17",
+        "object": "response",
+        "output": [
+          {
+            "arguments": "{\"name\":\"홍대입구\"}",
+            "call_id": "call_IQaXEXVm2KsMZ6GE9u26t9wK",
+            "name": "find_station",
+            "type": "function_call",
+            "id": "fc_040b517b038e6162006af4507822a487d2bead63f12a6049d0",
+            "async_": null,
+            "caller": null,
+            "namespace": null,
+            "status": "completed"
+          }
+        ],
+        "parallel_tool_calls": true,
+        "temperature": 1.0,
+        "tool_choice": "auto",
+        "tools": [
+          {
+            "name": "find_station",
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "name"
+              ],
+              "additionalProperties": false
+            },
+            "strict": true,
+            "type": "function",
+            "allowed_callers": null,
+            "async_": null,
+            "defer_loading": null,
+            "description": "역 이름으로 그 역을 지나는 호선 목록을 돌려준다. 없는 이름이면 이름에 그 글자가 들어간 역 후보를 돌려준다.",
+            "output_schema": null
+          },
+          {
+            "name": "line_stations",
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "line": {
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "line"
+              ],
+              "additionalProperties": false
+            },
+            "strict": true,
+            "type": "function",
+            "allowed_callers": null,
+            "async_": null,
+            "defer_loading": null,
+            "description": "호선 하나의 구간 목록을 돌려준다. 구간마다 출발 역, 도착 역, 소요 시간(초), 한 방향으로만 가는 구간인지가 들어 있다.",
+            "output_schema": null
+          },
+          {
+            "name": "travel_seconds",
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "line": {
+                  "type": "integer"
+                },
+                "from_station": {
+                  "type": "string"
+                },
+                "to_station": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "line",
+                "from_station",
+                "to_station"
+              ],
+              "additionalProperties": false
+            },
+            "strict": true,
+            "type": "function",
+            "allowed_callers": null,
+            "async_": null,
+            "defer_loading": null,
+            "description": "한 호선 안에서 갈아타지 않고 두 역 사이를 갈 때의 소요 시간(초)을 돌려준다. 두 역이 그 호선에 없으면 오류를 돌려준다.",
+            "output_schema": null
+          }
+        ],
+        "top_p": 0.98,
+        "background": false,
+        "completed_at": 1794396280.0,
+        "conversation": null,
+        "image": {
+          "context_compression": "disabled"
+        },
+        "max_output_tokens": null,
+        "max_tool_calls": null,
+        "moderation": null,
+        "previous_response_id": null,
+        "prompt": null,
+        "prompt_cache_diagnostics": null,
+        "prompt_cache_key": null,
+        "prompt_cache_options": null,
+        "prompt_cache_retention": "24h",
+        "reasoning": {
+          "context": "current_turn",
+          "effort": "none",
+          "generate_summary": null,
+          "mode": "standard",
+          "summary": null
+        },
+        "safety_identifier": null,
+        "service_tier": "default",
+        "status": "completed",
+        "text": {
+          "format": {
+            "name": "route",
+            "schema_": {
+              "type": "object",
+              "properties": {
+                "path": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "station": {
+                        "type": "string"
+                      },
+                      "line": {
+                        "type": "integer"
+                      }
+                    },
+                    "required": [
+                      "station",
+                      "line"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "seconds": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "path",
+                "seconds"
+              ],
+              "additionalProperties": false
+            },
+            "type": "json_schema",
+            "description": null,
+            "strict": true
+          },
+          "verbosity": "medium"
+        },
+        "tool_usage": {
+          "image_gen": {
+            "input_tokens": 0,
+            "input_tokens_details": {
+              "image_tokens": 0,
+              "text_tokens": 0
+            },
+            "output_tokens": 0,
+            "total_tokens": 0,
+            "cached_tokens": null,
+            "cached_tokens_details": null,
+            "output_tokens_details": {
+              "image_tokens": 0,
+              "text_tokens": 0
+            }
+          },
+          "web_search": {
+            "num_requests": 0
+          }
+        },
+        "top_logprobs": 0,
+        "truncation": "disabled",
+        "usage": {
+          "input_tokens": 420,
+          "input_tokens_details": {
+            "cache_write_tokens": 0,
+            "cached_tokens": 0,
+            "cache_write_tokens_details": null
+          },
+          "output_tokens": 21,
+          "output_tokens_details": {
+            "reasoning_tokens": 0
+          },
+          "total_tokens": 441
+        },
+        "user": null,
+        "billing": {
+          "payer": "developer"
+        },
+        "frequency_penalty": 0.0,
+        "presence_penalty": 0.0,
+        "store": true,
+        "output_text": ""
+      },
+      {
+        "id": "resp_040b517b038e6162006af45079268887d2b96f4e360332345e",
+        "access_programs": null,
+        "created_at": 1794396281.0,
+        "error": null,
+        "incomplete_details": null,
+        "instructions": "서울 지하철 1~8호선만 써서 질문에 답한다. 출발역부터 도착역까지 지나는 역을 빠짐없이 순서대로 path에 쓰고, 역마다 그 구간에서 탄 호선 번호(1~8)를 line에 쓴다. 갈아타는 역은 내리는 호선으로 한 번, 타는 호선으로 한 번, 같은 역을 두 번 쓴다. seconds는 전체 소요 시간을 초 단위 정수로 쓴다. 모르면 null이다. 도구로 역·노선·한 호선 안 소요 시간을 확인할 수 있다. 환승 한 번은 180초다. 경로는 직접 고른다.",
+        "metadata": {},
+        "model": "gpt-5.4-mini-2026-03-17",
+        "object": "response",
+        "output": [
+          {
+            "arguments": "{\"name\":\"양천구청\"}",
+            "call_id": "call_RsBORcWm2WevXLHs0bRujAUW",
+            "name": "find_station",
+            "type": "function_call",
+            "id": "fc_040b517b038e6162006af45079ddcc87d2831fde4426afaa11",
+            "async_": null,
+            "caller": null,
+            "namespace": null,
+            "status": "completed"
+          }
+        ],
+        "parallel_tool_calls": true,
+        "temperature": 1.0,
+        "tool_choice": "auto",
+        "tools": [
+          {
+            "name": "find_station",
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "name"
+              ],
+              "additionalProperties": false
+            },
+            "strict": true,
+            "type": "function",
+            "allowed_callers": null,
+            "async_": null,
+            "defer_loading": null,
+            "description": "역 이름으로 그 역을 지나는 호선 목록을 돌려준다. 없는 이름이면 이름에 그 글자가 들어간 역 후보를 돌려준다.",
+            "output_schema": null
+          },
+          {
+            "name": "line_stations",
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "line": {
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "line"
+              ],
+              "additionalProperties": false
+            },
+            "strict": true,
+            "type": "function",
+            "allowed_callers": null,
+            "async_": null,
+            "defer_loading": null,
+            "description": "호선 하나의 구간 목록을 돌려준다. 구간마다 출발 역, 도착 역, 소요 시간(초), 한 방향으로만 가는 구간인지가 들어 있다.",
+            "output_schema": null
+          },
+          {
+            "name": "travel_seconds",
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "line": {
+                  "type": "integer"
+                },
+                "from_station": {
+                  "type": "string"
+                },
+                "to_station": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "line",
+                "from_station",
+                "to_station"
+              ],
+              "additionalProperties": false
+            },
+            "strict": true,
+            "type": "function",
+            "allowed_callers": null,
+            "async_": null,
+            "defer_loading": null,
+            "description": "한 호선 안에서 갈아타지 않고 두 역 사이를 갈 때의 소요 시간(초)을 돌려준다. 두 역이 그 호선에 없으면 오류를 돌려준다.",
+            "output_schema": null
+          }
+        ],
+        "top_p": 0.98,
+        "background": false,
+        "completed_at": 1794396282.0,
+        "conversation": null,
+        "image": {
+          "context_compression": "disabled"
+        },
+        "max_output_tokens": null,
+        "max_tool_calls": null,
+        "moderation": null,
+        "previous_response_id": null,
+        "prompt": null,
+        "prompt_cache_diagnostics": null,
+        "prompt_cache_key": null,
+        "prompt_cache_options": null,
+        "prompt_cache_retention": "24h",
+        "reasoning": {
+          "context": "current_turn",
+          "effort": "none",
+          "generate_summary": null,
+          "mode": "standard",
+          "summary": null
+        },
+        "safety_identifier": null,
+        "service_tier": "default",
+        "status": "completed",
+        "text": {
+          "format": {
+            "name": "route",
+            "schema_": {
+              "type": "object",
+              "properties": {
+                "path": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "station": {
+                        "type": "string"
+                      },
+                      "line": {
+                        "type": "integer"
+                      }
+                    },
+                    "required": [
+                      "station",
+                      "line"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "seconds": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "path",
+                "seconds"
+              ],
+              "additionalProperties": false
+            },
+            "type": "json_schema",
+            "description": null,
+            "strict": true
+          },
+          "verbosity": "medium"
+        },
+        "tool_usage": {
+          "image_gen": {
+            "input_tokens": 0,
+            "input_tokens_details": {
+              "image_tokens": 0,
+              "text_tokens": 0
+            },
+            "output_tokens": 0,
+            "total_tokens": 0,
+            "cached_tokens": null,
+            "cached_tokens_details": null,
+            "output_tokens_details": {
+              "image_tokens": 0,
+              "text_tokens": 0
+            }
+          },
+          "web_search": {
+            "num_requests": 0
+          }
+        },
+        "top_logprobs": 0,
+        "truncation": "disabled",
+        "usage": {
+          "input_tokens": 472,
+          "input_tokens_details": {
+            "cache_write_tokens": 0,
+            "cached_tokens": 0,
+            "cache_write_tokens_details": null
+          },
+          "output_tokens": 21,
+          "output_tokens_details": {
+            "reasoning_tokens": 0
+          },
+          "total_tokens": 493
+        },
+        "user": null,
+        "billing": {
+          "payer": "developer"
+        },
+        "frequency_penalty": 0.0,
+        "presence_penalty": 0.0,
+        "store": true,
+        "output_text": ""
+      },
+      {
+        "id": "resp_040b517b038e6162006af4507ae48887d289075c571a774655",
+        "access_programs": null,
+        "created_at": 1794396283.0,
+        "error": null,
+        "incomplete_details": null,
+        "instructions": "서울 지하철 1~8호선만 써서 질문에 답한다. 출발역부터 도착역까지 지나는 역을 빠짐없이 순서대로 path에 쓰고, 역마다 그 구간에서 탄 호선 번호(1~8)를 line에 쓴다. 갈아타는 역은 내리는 호선으로 한 번, 타는 호선으로 한 번, 같은 역을 두 번 쓴다. seconds는 전체 소요 시간을 초 단위 정수로 쓴다. 모르면 null이다. 도구로 역·노선·한 호선 안 소요 시간을 확인할 수 있다. 환승 한 번은 180초다. 경로는 직접 고른다.",
+        "metadata": {},
+        "model": "gpt-5.4-mini-2026-03-17",
+        "object": "response",
+        "output": [
+          {
+            "arguments": "{\"line\":2,\"from_station\":\"홍대입구\",\"to_station\":\"양천구청\"}",
+            "call_id": "call_0R6AjBY9hODhBkahfIaQS3RE",
+            "name": "travel_seconds",
+            "type": "function_call",
+            "id": "fc_040b517b038e6162006af4507b717c87d2947b01ee5d022a39",
+            "async_": null,
+            "caller": null,
+            "namespace": null,
+            "status": "completed"
+          }
+        ],
+        "parallel_tool_calls": true,
+        "temperature": 1.0,
+        "tool_choice": "auto",
+        "tools": [
+          {
+            "name": "find_station",
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "name"
+              ],
+              "additionalProperties": false
+            },
+            "strict": true,
+            "type": "function",
+            "allowed_callers": null,
+            "async_": null,
+            "defer_loading": null,
+            "description": "역 이름으로 그 역을 지나는 호선 목록을 돌려준다. 없는 이름이면 이름에 그 글자가 들어간 역 후보를 돌려준다.",
+            "output_schema": null
+          },
+          {
+            "name": "line_stations",
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "line": {
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "line"
+              ],
+              "additionalProperties": false
+            },
+            "strict": true,
+            "type": "function",
+            "allowed_callers": null,
+            "async_": null,
+            "defer_loading": null,
+            "description": "호선 하나의 구간 목록을 돌려준다. 구간마다 출발 역, 도착 역, 소요 시간(초), 한 방향으로만 가는 구간인지가 들어 있다.",
+            "output_schema": null
+          },
+          {
+            "name": "travel_seconds",
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "line": {
+                  "type": "integer"
+                },
+                "from_station": {
+                  "type": "string"
+                },
+                "to_station": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "line",
+                "from_station",
+                "to_station"
+              ],
+              "additionalProperties": false
+            },
+            "strict": true,
+            "type": "function",
+            "allowed_callers": null,
+            "async_": null,
+            "defer_loading": null,
+            "description": "한 호선 안에서 갈아타지 않고 두 역 사이를 갈 때의 소요 시간(초)을 돌려준다. 두 역이 그 호선에 없으면 오류를 돌려준다.",
+            "output_schema": null
+          }
+        ],
+        "top_p": 0.98,
+        "background": false,
+        "completed_at": 1794396283.0,
+        "conversation": null,
+        "image": {
+          "context_compression": "disabled"
+        },
+        "max_output_tokens": null,
+        "max_tool_calls": null,
+        "moderation": null,
+        "previous_response_id": null,
+        "prompt": null,
+        "prompt_cache_diagnostics": null,
+        "prompt_cache_key": null,
+        "prompt_cache_options": null,
+        "prompt_cache_retention": "24h",
+        "reasoning": {
+          "context": "current_turn",
+          "effort": "none",
+          "generate_summary": null,
+          "mode": "standard",
+          "summary": null
+        },
+        "safety_identifier": null,
+        "service_tier": "default",
+        "status": "completed",
+        "text": {
+          "format": {
+            "name": "route",
+            "schema_": {
+              "type": "object",
+              "properties": {
+                "path": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "station": {
+                        "type": "string"
+                      },
+                      "line": {
+                        "type": "integer"
+                      }
+                    },
+                    "required": [
+                      "station",
+                      "line"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "seconds": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "path",
+                "seconds"
+              ],
+              "additionalProperties": false
+            },
+            "type": "json_schema",
+            "description": null,
+            "strict": true
+          },
+          "verbosity": "medium"
+        },
+        "tool_usage": {
+          "image_gen": {
+            "input_tokens": 0,
+            "input_tokens_details": {
+              "image_tokens": 0,
+              "text_tokens": 0
+            },
+            "output_tokens": 0,
+            "total_tokens": 0,
+            "cached_tokens": null,
+            "cached_tokens_details": null,
+            "output_tokens_details": {
+              "image_tokens": 0,
+              "text_tokens": 0
+            }
+          },
+          "web_search": {
+            "num_requests": 0
+          }
+        },
+        "top_logprobs": 0,
+        "truncation": "disabled",
+        "usage": {
+          "input_tokens": 524,
+          "input_tokens_details": {
+            "cache_write_tokens": 0,
+            "cached_tokens": 0,
+            "cache_write_tokens_details": null
+          },
+          "output_tokens": 34,
+          "output_tokens_details": {
+            "reasoning_tokens": 0
+          },
+          "total_tokens": 558
+        },
+        "user": null,
+        "billing": {
+          "payer": "developer"
+        },
+        "frequency_penalty": 0.0,
+        "presence_penalty": 0.0,
+        "store": true,
+        "output_text": ""
+      },
+      {
+        "id": "resp_040b517b038e6162006af4507c6c6487d2b9aa3608dcfa71cd",
+        "access_programs": null,
+        "created_at": 1794396284.0,
+        "error": null,
+        "incomplete_details": null,
+        "instructions": "서울 지하철 1~8호선만 써서 질문에 답한다. 출발역부터 도착역까지 지나는 역을 빠짐없이 순서대로 path에 쓰고, 역마다 그 구간에서 탄 호선 번호(1~8)를 line에 쓴다. 갈아타는 역은 내리는 호선으로 한 번, 타는 호선으로 한 번, 같은 역을 두 번 쓴다. seconds는 전체 소요 시간을 초 단위 정수로 쓴다. 모르면 null이다. 도구로 역·노선·한 호선 안 소요 시간을 확인할 수 있다. 환승 한 번은 180초다. 경로는 직접 고른다.",
+        "metadata": {},
+        "model": "gpt-5.4-mini-2026-03-17",
+        "object": "response",
+        "output": [
+          {
+            "id": "msg_040b517b038e6162006af4507cf3e087d2bdd4818aebcba0b1",
+            "content": [
+              {
+                "annotations": [],
+                "text": "{\"path\":[{\"station\":\"홍대입구\",\"line\":2},{\"station\":\"양천구청\",\"line\":2}],\"seconds\":750}",
+                "type": "output_text",
+                "logprobs": []
+              }
+            ],
+            "role": "assistant",
+            "status": "completed",
+            "type": "message",
+            "phase": "final_answer"
+          }
+        ],
+        "parallel_tool_calls": true,
+        "temperature": 1.0,
+        "tool_choice": "auto",
+        "tools": [
+          {
+            "name": "find_station",
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "name"
+              ],
+              "additionalProperties": false
+            },
+            "strict": true,
+            "type": "function",
+            "allowed_callers": null,
+            "async_": null,
+            "defer_loading": null,
+            "description": "역 이름으로 그 역을 지나는 호선 목록을 돌려준다. 없는 이름이면 이름에 그 글자가 들어간 역 후보를 돌려준다.",
+            "output_schema": null
+          },
+          {
+            "name": "line_stations",
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "line": {
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "line"
+              ],
+              "additionalProperties": false
+            },
+            "strict": true,
+            "type": "function",
+            "allowed_callers": null,
+            "async_": null,
+            "defer_loading": null,
+            "description": "호선 하나의 구간 목록을 돌려준다. 구간마다 출발 역, 도착 역, 소요 시간(초), 한 방향으로만 가는 구간인지가 들어 있다.",
+            "output_schema": null
+          },
+          {
+            "name": "travel_seconds",
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "line": {
+                  "type": "integer"
+                },
+                "from_station": {
+                  "type": "string"
+                },
+                "to_station": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "line",
+                "from_station",
+                "to_station"
+              ],
+              "additionalProperties": false
+            },
+            "strict": true,
+            "type": "function",
+            "allowed_callers": null,
+            "async_": null,
+            "defer_loading": null,
+            "description": "한 호선 안에서 갈아타지 않고 두 역 사이를 갈 때의 소요 시간(초)을 돌려준다. 두 역이 그 호선에 없으면 오류를 돌려준다.",
+            "output_schema": null
+          }
+        ],
+        "top_p": 0.98,
+        "background": false,
+        "completed_at": 1794396285.0,
+        "conversation": null,
+        "image": {
+          "context_compression": "disabled"
+        },
+        "max_output_tokens": null,
+        "max_tool_calls": null,
+        "moderation": null,
+        "previous_response_id": null,
+        "prompt": null,
+        "prompt_cache_diagnostics": null,
+        "prompt_cache_key": null,
+        "prompt_cache_options": null,
+        "prompt_cache_retention": "24h",
+        "reasoning": {
+          "context": "current_turn",
+          "effort": "none",
+          "generate_summary": null,
+          "mode": "standard",
+          "summary": null
+        },
+        "safety_identifier": null,
+        "service_tier": "default",
+        "status": "completed",
+        "text": {
+          "format": {
+            "name": "route",
+            "schema_": {
+              "type": "object",
+              "properties": {
+                "path": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "station": {
+                        "type": "string"
+                      },
+                      "line": {
+                        "type": "integer"
+                      }
+                    },
+                    "required": [
+                      "station",
+                      "line"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "seconds": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "path",
+                "seconds"
+              ],
+              "additionalProperties": false
+            },
+            "type": "json_schema",
+            "description": null,
+            "strict": true
+          },
+          "verbosity": "medium"
+        },
+        "tool_usage": {
+          "image_gen": {
+            "input_tokens": 0,
+            "input_tokens_details": {
+              "image_tokens": 0,
+              "text_tokens": 0
+            },
+            "output_tokens": 0,
+            "total_tokens": 0,
+            "cached_tokens": null,
+            "cached_tokens_details": null,
+            "output_tokens_details": {
+              "image_tokens": 0,
+              "text_tokens": 0
+            }
+          },
+          "web_search": {
+            "num_requests": 0
+          }
+        },
+        "top_logprobs": 0,
+        "truncation": "disabled",
+        "usage": {
+          "input_tokens": 575,
+          "input_tokens_details": {
+            "cache_write_tokens": 0,
+            "cached_tokens": 0,
+            "cache_write_tokens_details": null
+          },
+          "output_tokens": 38,
+          "output_tokens_details": {
+            "reasoning_tokens": 0
+          },
+          "total_tokens": 613
+        },
+        "user": null,
+        "billing": {
+          "payer": "developer"
+        },
+        "frequency_penalty": 0.0,
+        "presence_penalty": 0.0,
+        "store": true,
+        "output_text": "{\"path\":[{\"station\":\"홍대입구\",\"line\":2},{\"station\":\"양천구청\",\"line\":2}],\"seconds\":750}"
+      }
+    ],
+    "tool_calls": 3,
+    "tokens": 2105,
+    "parse_error": null
+  }
+}

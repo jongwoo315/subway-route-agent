@@ -5,7 +5,7 @@ from subway_route_agent.cli import QUESTIONS, main
 from subway_route_agent.data import Row
 from subway_route_agent.grade import Grade
 from subway_route_agent.graph import build_graph
-from subway_route_agent.report import Result, format_path, format_seconds, render
+from subway_route_agent.report import Result, format_path, format_seconds, render, render_compare
 from subway_route_agent.route import Route, shortest
 
 NO_TRUTH = {"q6", "q7"}
@@ -161,3 +161,186 @@ def test_render_counts_hand_checked_answers_among_questions_with_truth():
     assert "- 손 계산으로 확인한 정답: 1/2" in text
     lines = text.splitlines()
     assert lines.index("- 파싱 실패 0/3") + 1 == lines.index("- 손 계산으로 확인한 정답: 1/2")
+
+
+# ---- 여러 답하는 쪽 · 비교 리포트 (#188) ----
+
+_Q1 = json.loads(QUESTIONS.read_text(encoding="utf-8"))[0]
+# q1 손 계산 경로
+GOOD_PATH = [(st, seg["line"]) for seg in _Q1["hand_path"] for st in seg["stations"]]
+
+
+def _fake_answerers(monkeypatch, tmp_path):
+    """API 없이 도는 가짜 답하는 쪽. good은 q1 손 계산 경로를 모든 질문에 말한다."""
+    from subway_route_agent import cli
+    from subway_route_agent.answerers import ANSWERERS
+
+    monkeypatch.setattr(cli, "REPORT_DIR", tmp_path / "reports")
+    monkeypatch.setitem(ANSWERERS, "good", lambda text: Answer(
+        path=GOOD_PATH, seconds=1740, tool_calls=2, tokens=50, raw="g"))
+    monkeypatch.setitem(ANSWERERS, "broken", lambda text: Answer(
+        path=[("강남", 2), ("홍대입구", 5)], tool_calls=0, tokens=7, raw="b"))
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    return tmp_path / "reports"
+
+
+def test_single_answerer_writes_no_compare_report(monkeypatch, tmp_path):
+    reports = _fake_answerers(monkeypatch, tmp_path)
+    assert main(["--answerer", "stub"]) == 0
+    assert (reports / "stub.md").exists() and not (reports / "compare.md").exists()
+
+
+def test_duplicate_answerer_name_runs_once_without_compare(monkeypatch, tmp_path):
+    reports = _fake_answerers(monkeypatch, tmp_path)
+    assert main(["--answerer", "stub", "stub"]) == 0
+    assert not (reports / "compare.md").exists()
+
+
+def test_two_answerers_write_each_report_and_compare_with_one_row_per_question(
+    monkeypatch, tmp_path
+):
+    reports = _fake_answerers(monkeypatch, tmp_path)
+    assert main(["--answerer", "stub", "good"]) == 0
+    assert (reports / "stub.md").exists() and (reports / "good.md").exists()
+    text = (reports / "compare.md").read_text(encoding="utf-8")
+    questions = json.loads(QUESTIONS.read_text(encoding="utf-8"))
+    table = [line for line in text.splitlines() if line.startswith("| q")]
+    assert len(table) == len(questions) == 10
+    header = next(line for line in text.splitlines() if line.startswith("| 질문"))
+    for name in ("stub", "good"):
+        for col in ("맞음", "답 경로 소요 시간", "답이 말한 시간"):
+            assert f"{name} {col}" in header
+    assert header.startswith("| 질문 | 정답 시간 |")
+    assert "지시문에만" not in text  # llm-tools를 돌리지 않았으면 지시문 차이 줄도 없다
+    # 질문마다 두 답하는 쪽 값이 다 있다(열 수 = 2 + 3 × 2)
+    assert all(len(row.strip("| ").split(" | ")) == 8 for row in table)
+
+
+def test_compare_marks_broken_path_and_empty_answer_and_times(monkeypatch, tmp_path):
+    reports = _fake_answerers(monkeypatch, tmp_path)
+    assert main(["--answerer", "stub", "broken", "good"]) == 0
+    text = (reports / "compare.md").read_text(encoding="utf-8")
+    rows = {line.split(" | ")[0].lstrip("| "): line.split(" | ")
+            for line in text.splitlines() if line.startswith("| q")}
+    # 열: 질문, 정답 시간, stub(맞음, 경로, 말한 시간), broken(...), good(...)
+    q1 = [c.strip(" |") for c in rows["q1"]]
+    assert q1[2:5] == ["X", "답 없음", "없음"]
+    assert q1[5:8] == ["X", "끊김", "없음"]
+    assert q1[8:11] == ["O", "29분 0초", "29분 0초"]
+    assert "good" in text and "- good: 정답률 1/10" in text
+
+
+def test_compare_head_counts_calls_tokens_seconds_match_and_limit(monkeypatch, tmp_path):
+    from subway_route_agent import cli
+    from subway_route_agent.answerers import ANSWERERS, LIMIT_REACHED
+
+    reports = _fake_answerers(monkeypatch, tmp_path)
+    monkeypatch.setattr(cli, "QUESTIONS", _write_questions(tmp_path, [
+        _question("a", "강남", "홍대입구"), _question("b", "강남", "홍대입구")]))
+    answers = iter([Answer(path=GOOD_PATH, seconds=1740, tool_calls=3, tokens=10),
+                    Answer(parse_error=LIMIT_REACHED, tool_calls=25, tokens=90)])
+    monkeypatch.setitem(ANSWERERS, "capped", lambda text: next(answers))
+    assert main(["--answerer", "stub", "capped"]) == 0
+    text = (reports / "compare.md").read_text(encoding="utf-8")
+    line = next(ln for ln in text.splitlines() if ln.startswith("- capped:"))
+    assert "정답률 1/2" in line and "파싱 실패 1/2" in line
+    assert "도구 호출 28" in line and "토큰 100" in line
+    assert "답이 말한 시간이 정답과 같은 질문 1/2" in line
+    assert "도구 호출 상한에 닿은 질문 1" in line
+
+
+def _write_questions(tmp_path, questions):
+    qfile = tmp_path / "questions.json"
+    qfile.write_text(json.dumps(questions, ensure_ascii=False), encoding="utf-8")
+    return qfile
+
+
+def test_out_with_two_answerers_is_the_compare_path_and_raw_is_split(monkeypatch, tmp_path):
+    reports = _fake_answerers(monkeypatch, tmp_path)
+    out, raw = tmp_path / "x" / "cmp.md", tmp_path / "r" / "raw.json"
+    assert main(["--answerer", "stub", "good", "--out", str(out), "--raw", str(raw)]) == 0
+    assert out.exists() and (reports / "stub.md").exists() and (reports / "good.md").exists()
+    assert not (reports / "compare.md").exists()
+    assert json.loads((tmp_path / "r" / "raw-good.json").read_text("utf-8"))["q1"]["raw"] == "g"
+    assert (tmp_path / "r" / "raw-stub.json").exists() and not raw.exists()
+
+
+def test_raw_with_one_answerer_keeps_the_given_path(monkeypatch, tmp_path):
+    _fake_answerers(monkeypatch, tmp_path)
+    raw = tmp_path / "raw.json"
+    assert main(["--answerer", "good", "--raw", str(raw)]) == 0
+    assert raw.exists()
+
+
+def test_llm_tools_without_key_exits_2_before_any_report(monkeypatch, tmp_path, capsys):
+    reports = _fake_answerers(monkeypatch, tmp_path)
+    assert main(["--answerer", "stub", "llm-tools"]) == 2
+    assert "OPENAI_API_KEY가 없다" in capsys.readouterr().err
+    assert not reports.exists()
+
+
+def test_llm_tools_report_names_model_and_tools(monkeypatch, tmp_path):
+    from subway_route_agent import answerers
+    from subway_route_agent.answerers import ANSWERERS
+
+    reports = _fake_answerers(monkeypatch, tmp_path)
+    monkeypatch.setenv("OPENAI_API_KEY", "dummy")
+    monkeypatch.setitem(ANSWERERS, "llm-tools", lambda text: Answer(tool_calls=4))
+    assert main(["--answerer", "llm-tools"]) == 0
+    text = (reports / "llm-tools.md").read_text(encoding="utf-8")
+    assert f"- 답하는 쪽: llm-tools (모델 {answerers.MODEL})" in text
+    assert "- 도구: find_station, line_stations, travel_seconds (호출 상한 25)" in text
+    rows = {line.split(" | ")[0].lstrip("| "): line.split(" | ") for line in text.splitlines()}
+    assert rows["q1"][8] == "4"  # 도구 호출 열
+
+
+def test_api_error_in_second_answerer_keeps_first_raw_and_writes_no_report(
+    monkeypatch, tmp_path
+):
+    import openai
+
+    from subway_route_agent.answerers import ANSWERERS
+
+    reports = _fake_answerers(monkeypatch, tmp_path)
+
+    def fail(text):
+        raise openai.APIError("연결 실패", request=None, body=None)
+
+    monkeypatch.setenv("OPENAI_API_KEY", "dummy")
+    monkeypatch.setitem(ANSWERERS, "llm-tools", fail)
+    raw = tmp_path / "raw.json"
+    assert main(["--answerer", "good", "llm-tools", "--raw", str(raw)]) == 1
+    assert (tmp_path / "raw-good.json").exists()
+    assert not reports.exists()
+
+
+def test_render_compare_unit_head_and_rows():
+    g = build_graph([Row(1, "A", 0), Row(1, "B", 60), Row(1, "C", 600)])
+    truth = Route([("A", 1), ("C", 1)], 660, 0)
+    path = [("A", 1), ("B", 1), ("C", 1)]
+    hit = Result("q1", truth, Answer(path=path, seconds=660, tool_calls=1, tokens=5),
+                 Grade(True, True), 2000.0)
+    miss = Result("q1", truth, Answer(), Grade(False, False), 500.0)
+    text = render_compare("d.csv", {"x": [hit], "y": [miss]}, {"x": "m1", "y": None}, g)
+    assert "- x (모델 m1): 정답률 1/1" in text and "- y: 정답률 0/1" in text
+    assert "응답 시간 합 2.0초" in text and "응답 시간 합 0.5초" in text
+    row = next(line for line in text.splitlines() if line.startswith("| q1"))
+    assert [c.strip(" |") for c in row.split(" | ")][1:] == [
+        "11분 0초", "O", "11분 0초", "11분 0초", "X", "답 없음", "없음"]
+
+
+def test_render_compare_shows_instruction_difference_only_with_llm_tools():
+    g = build_graph([Row(1, "A", 0), Row(1, "B", 60)])
+    r = Result("q1", None, Answer(), Grade(False, False), 0.0)
+    with_tools = render_compare("d.csv", {"stub": [r], "llm-tools": [r]}, {}, g)
+    assert "- LLM + 도구 지시문에만 환승 180초와 도구 사용 안내가 있다" in with_tools
+    without = render_compare("d.csv", {"stub": [r], "llm": [r]}, {}, g)
+    assert "지시문에만" not in without
+
+
+def test_render_compare_does_not_count_empty_answer_as_matching_no_truth_question():
+    # 정답 없음 질문(truth=None)에서 말한 시간도 None이어도 「정답과 같은 질문」으로 세지 않는다
+    g = build_graph([Row(1, "A", 0), Row(1, "B", 60)])
+    r = Result("q6", None, Answer(), Grade(False, False), 0.0)
+    text = render_compare("d.csv", {"stub": [r], "llm": [r]}, {}, g)
+    assert "답이 말한 시간이 정답과 같은 질문 0/1" in text
