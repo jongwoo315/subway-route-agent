@@ -336,3 +336,11 @@ def test_render_compare_shows_instruction_difference_only_with_llm_tools():
     assert "- LLM + 도구 지시문에만 환승 180초와 도구 사용 안내가 있다" in with_tools
     without = render_compare("d.csv", {"stub": [r], "llm": [r]}, {}, g)
     assert "지시문에만" not in without
+
+
+def test_render_compare_does_not_count_empty_answer_as_matching_no_truth_question():
+    # 정답 없음 질문(truth=None)에서 말한 시간도 None이어도 「정답과 같은 질문」으로 세지 않는다
+    g = build_graph([Row(1, "A", 0), Row(1, "B", 60)])
+    r = Result("q6", None, Answer(), Grade(False, False), 0.0)
+    text = render_compare("d.csv", {"stub": [r], "llm": [r]}, {}, g)
+    assert "답이 말한 시간이 정답과 같은 질문 0/1" in text
