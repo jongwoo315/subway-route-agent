@@ -130,3 +130,11 @@ def test_call_tool_runs_by_name_and_returns_json_string():
 )
 def test_call_tool_bad_name_or_arguments_returns_error_json(name, args):
     assert "error" in json.loads(call_tool(name, args))
+
+
+def test_travel_seconds_does_not_use_transfer_edges():
+    # 두 역이 같은 호선에 있고 다른 호선으로 갈아타면 더 빨라지는 쌍이다.
+    # 환승 간선을 쓰면 이 값보다 작아진다(2호선 시청→교대 1200, 강남→시청 1470, 3호선 지축→오금 2900)
+    assert travel_seconds(2, "시청", "교대") == {"seconds": 1830}
+    assert travel_seconds(2, "강남", "시청") == {"seconds": 1740}
+    assert travel_seconds(3, "지축", "오금") == {"seconds": 3090}
