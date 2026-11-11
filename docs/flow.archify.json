@@ -9,7 +9,7 @@
   "repository": {
    "url": "https://github.com/jongwoo315/subway-route-agent",
    "provider": "github",
-   "revision": "bb8cb2fb27f24b098e27151e52be4e619217b34d"
+   "revision": "96303a480d023c594e430b567f2b64fe509b5586"
   }
  },
  "lanes": [
@@ -60,8 +60,8 @@
    "col": 2,
    "type": "database",
    "label": "questions.json",
-   "sublabel": "질문 3개",
-   "tag": "그대로",
+   "sublabel": "[바뀜] 질문 10개, 손 계산 값 8개",
+   "tag": "조건 바뀜",
    "sources": [
     {
      "path": "data/questions.json",
@@ -91,9 +91,14 @@
    "col": 2,
    "type": "backend",
    "label": "shortest",
-   "sublabel": "환승 상한 다익스트라",
-   "tag": "그대로",
+   "sublabel": "[바뀜] 시한을 못 맞추면 정답 없음",
+   "tag": "조건 바뀜",
    "sources": [
+    {
+     "path": "src/subway_route_agent/cli.py",
+     "line": 32,
+     "label": "truth_for"
+    },
     {
      "path": "src/subway_route_agent/route.py",
      "line": 14,
@@ -139,7 +144,7 @@
    "col": 5,
    "type": "backend",
    "label": "리포트",
-   "sublabel": "[바뀜] 파싱 실패·토큰 열, 답하는 쪽마다 파일",
+   "sublabel": "[바뀜] 손 계산으로 확인한 정답 K/M 줄",
    "tag": "조건 바뀜",
    "sources": [
     {
@@ -155,8 +160,8 @@
    "col": 4,
    "type": "frontend",
    "label": "llm — LLM 혼자",
-   "sublabel": "[새로] 문장만 OpenAI에 묻고 JSON을 읽는다",
-   "tag": "새로 생김",
+   "sublabel": "문장만 OpenAI에 묻고 JSON을 읽는다",
+   "tag": "그대로",
    "sources": [
     {
      "path": "src/subway_route_agent/answerers.py",
@@ -167,6 +172,37 @@
      "path": "src/subway_route_agent/answerers.py",
      "line": 29,
      "label": "SYSTEM"
+    }
+   ]
+  },
+  {
+   "id": "check",
+   "lane": "input",
+   "col": 3,
+   "type": "security",
+   "label": "역 검사",
+   "sublabel": "[새로] 그래프에 없는 역이면 exit 2",
+   "tag": "새로 생김",
+   "sources": [
+    {
+     "path": "src/subway_route_agent/cli.py",
+     "line": 57,
+     "label": "역 검사"
+    }
+   ]
+  },
+  {
+   "id": "hand",
+   "lane": "truth",
+   "col": 3,
+   "type": "database",
+   "label": "손 계산 테스트",
+   "sublabel": "[새로] CSV 행만 더해 다익스트라와 맞춘다",
+   "tag": "새로 생김",
+   "sources": [
+    {
+     "path": "tests/test_route.py",
+     "line": 1
     }
    ]
   }
@@ -181,18 +217,6 @@
    "id": "f2",
    "from": "graph",
    "to": "route"
-  },
-  {
-   "id": "f3",
-   "from": "questions",
-   "to": "route",
-   "label": "출발·도착·조건"
-  },
-  {
-   "id": "f4",
-   "from": "questions",
-   "to": "stub",
-   "label": "문장만"
   },
   {
    "id": "f5",
@@ -212,16 +236,39 @@
    "to": "report"
   },
   {
-   "id": "f8",
-   "from": "questions",
-   "to": "llm",
-   "label": "문장만 (--answerer llm)"
-  },
-  {
    "id": "f9",
    "from": "llm",
    "to": "grade",
    "label": "답"
+  },
+  {
+   "id": "g1",
+   "from": "questions",
+   "to": "check"
+  },
+  {
+   "id": "g2",
+   "from": "check",
+   "to": "route",
+   "label": "출발·도착·조건"
+  },
+  {
+   "id": "g3",
+   "from": "check",
+   "to": "stub",
+   "label": "문장만"
+  },
+  {
+   "id": "g4",
+   "from": "check",
+   "to": "llm",
+   "label": "문장만 (--answerer llm)"
+  },
+  {
+   "id": "g5",
+   "from": "route",
+   "to": "hand",
+   "label": "테스트에서 비교"
   }
  ],
  "cards": [
@@ -229,8 +276,8 @@
    "dot": "cyan",
    "title": "읽는 법",
    "items": [
-    "[새로]·[바뀜]은 PR #1 대비 이번 PR #2가 바꾼 단계다",
-    "답하는 쪽은 실행마다 하나다. 기본은 stub, --answerer llm이면 LLM 혼자"
+    "[새로]·[바뀜]은 PR #2 대비 이번 PR #3이 바꾼 단계다",
+    "손 계산 테스트는 실행 흐름이 아니라 테스트에서만 돈다"
    ]
   }
  ]
