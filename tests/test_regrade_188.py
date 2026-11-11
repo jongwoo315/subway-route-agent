@@ -45,14 +45,20 @@ def _old_correct(q: dict, ans: Answer, truth) -> bool:
     return actual == truth.seconds
 
 
-@pytest.mark.parametrize("name", ["raw-llm.json", "raw-llm-tools.json"])
-def test_full_path_answers_grade_like_188(name):
+# (원문 파일, 질문 수, 지나는 역을 다 쓴 답 수). 숫자를 박아 두어 파싱이 조용히 비어도 잡힌다
+FULL_PATH_COUNTS = [("raw-llm.json", 10, 7), ("raw-llm-tools.json", 10, 2)]
+
+
+@pytest.mark.parametrize("name,total,full", FULL_PATH_COUNTS)
+def test_full_path_answers_grade_like_188(name, total, full):
     unchanged = 0
-    for qid, ans in _answers(name).items():
+    answers = _answers(name)
+    assert len(answers) == total
+    for qid, ans in answers.items():
         q = QS[qid]
         truth = truth_for(G, q)
         new = grade(G, q, ans, truth)
         if ans.path and new.filled == 0:
             assert new.correct == _old_correct(q, ans, truth), (name, qid)
             unchanged += 1
-    assert unchanged > 0  # 비교할 답이 하나도 없으면 이 테스트는 아무것도 안 잰다
+    assert unchanged == full
