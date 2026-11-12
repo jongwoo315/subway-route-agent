@@ -3,7 +3,7 @@ from itertools import pairwise
 
 from subway_route_agent.answerers import LIMIT_REACHED, Answer
 from subway_route_agent.grade import Grade, fill_path, path_seconds
-from subway_route_agent.graph import TRANSFER_SECONDS, Graph
+from subway_route_agent.graph import TRANSFER_SECONDS, Graph, TransferCounts
 from subway_route_agent.route import Route
 
 COLUMNS = [
@@ -41,13 +41,30 @@ def format_path(route: Route | None) -> str:
     return " → ".join(parts)
 
 
+def transfer_head(counts: TransferCounts | None) -> list[str]:
+    """리포트 머리의 환승 시간 줄. 출처 한 줄과, 그 실행의 그래프에서 센 환승역 수 한 줄이다."""
+    lines = [
+        "- 환승 시간: 서울교통공사 환승역 거리·소요시간 "
+        "(data.go.kr 15044419, 2026-08-31 기준, 최단 환승거리 ÷ 초당 1.2m)"
+    ]
+    if counts is not None:
+        left = counts.default_stations
+        names = f"({', '.join(left)})" if left else ""
+        lines.append(
+            f"- 데이터 환승 시간을 쓴 환승역 {counts.data_stations}개 · "
+            f"{TRANSFER_SECONDS}초가 남은 환승역 {len(left)}개{names} "
+            f"(갈아타는 방향 {counts.directions}개 중 반대 방향 값 {counts.reverse}개). "
+            "기다리는 시간은 0으로 본다")
+    return lines
+
+
 def _ox(flag: bool) -> str:
     return "O" if flag else "X"
 
 
 def render(
     answerer: str, data_name: str, results: list[Result], model: str | None = None,
-    notes: list[str] | None = None,
+    notes: list[str] | None = None, counts: TransferCounts | None = None,
 ) -> str:
     n = len(results)
     hits = sum(r.grade.correct for r in results)
@@ -62,7 +79,7 @@ def render(
         f"- 답하는 쪽: {who}",
         *(f"- {note}" for note in notes or []),
         f"- 데이터: {data_name} (서울 열린데이터광장 OA-12034, 2024-08-10 기준, 1~8호선)",
-        f"- 환승 한 번에 {TRANSFER_SECONDS}초로 고정한 stub이다. 기다리는 시간은 0으로 본다",
+        *transfer_head(counts),
         f"- 정답률 {hits}/{n} ({rate}%)",
         f"- 파싱 실패 {parse_fails}/{n}",
         f"- 직접 계산으로 확인한 정답: {hand_ok}/{len(with_truth)}",
@@ -91,7 +108,9 @@ def render(
     return "\n".join(lines) + "\n"
 
 
-COMPARE_DIFF = f"LLM + 도구 지시문에만 환승 {TRANSFER_SECONDS}초와 도구 사용 안내가 있다"
+COMPARE_DIFF = (
+    "LLM + 도구 지시문에만 도구 사용 안내와 「환승 시간은 역과 호선마다 다르다」 문장이 있다"
+)
 COMPARE_COLUMNS = ["맞음", "채운 역", "답 경로 소요 시간", "답이 말한 시간"]
 
 
@@ -109,6 +128,7 @@ def render_compare(
     by_answerer: dict[str, list[Result]],
     models: dict[str, str | None],
     g: Graph,
+    counts: TransferCounts | None = None,
 ) -> str:
     """답하는 쪽들의 결과를 질문마다 한 줄에 놓는다. by_answerer의 값은 같은 질문 순서다."""
     names = list(by_answerer)
@@ -117,7 +137,7 @@ def render_compare(
         "# 비교 리포트",
         "",
         f"- 데이터: {data_name} (서울 열린데이터광장 OA-12034, 2024-08-10 기준, 1~8호선)",
-        f"- 환승 한 번에 {TRANSFER_SECONDS}초로 고정한 stub이다. 기다리는 시간은 0으로 본다",
+        *transfer_head(counts),
         *([f"- {COMPARE_DIFF}"] if "llm-tools" in by_answerer else []),
     ]
     for name in names:
