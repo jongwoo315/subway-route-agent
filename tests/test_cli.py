@@ -262,7 +262,8 @@ def test_compare_head_counts_calls_tokens_seconds_match_and_limit(monkeypatch, t
 
     reports = _fake_answerers(monkeypatch, tmp_path)
     monkeypatch.setattr(cli, "QUESTIONS", _write_questions(tmp_path, [
-        _question("a", "강남", "홍대입구"), _question("b", "강남", "홍대입구")]))
+        _question("a", "강남", "홍대입구", max_transfers=1),
+        _question("b", "강남", "홍대입구", max_transfers=1)]))  # q1과 같은 조건
     answers = iter([Answer(path=GOOD_PATH, seconds=1740, tool_calls=3, tokens=10),
                     Answer(parse_error=LIMIT_REACHED, tool_calls=25, tokens=90)])
     monkeypatch.setitem(ANSWERERS, "capped", lambda text: next(answers))
