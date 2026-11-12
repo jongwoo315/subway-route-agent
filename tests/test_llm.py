@@ -199,7 +199,8 @@ def test_api_error_midway_keeps_raw_of_answered_questions(monkeypatch, tmp_path)
     raw, out = tmp_path / "raw.json", tmp_path / "x.md"
     assert main(["--answerer", "llm", "--out", str(out), "--raw", str(raw)]) == 1
     saved = json.loads(raw.read_text(encoding="utf-8"))
-    assert list(saved) == ["q1"] and saved["q1"] == {"raw": GOOD, "tokens": 7, "parse_error": None}
+    assert list(saved) == ["q1"] and saved["q1"] == {
+        "raw": GOOD, "tokens": 7, "parse_error": None, "tool_log": []}
     assert not out.exists()
 
 

@@ -1,6 +1,11 @@
+import json
+
+import pytest
+
 from subway_route_agent.answerers import Answer
-from subway_route_agent.data import Row
-from subway_route_agent.grade import grade
+from subway_route_agent.cli import QUESTIONS, truth_for
+from subway_route_agent.data import Row, load_rows
+from subway_route_agent.grade import fill_path, grade, path_seconds
 from subway_route_agent.graph import build_graph
 from subway_route_agent.route import shortest
 
@@ -95,3 +100,77 @@ def test_answer_to_question_without_truth_is_answered_but_never_correct():
     assert g.answered and not g.correct and g.violations == []
     g = grade(G, _q(max_transfers=0), Answer(), None)
     assert not g.answered and not g.correct
+
+
+# --- #193 빠진 중간 역 채우기 ---------------------------------------------------
+
+
+REAL = build_graph(load_rows())
+QS = {q["id"]: q for q in json.loads(QUESTIONS.read_text(encoding="utf-8"))}
+
+
+def _hand_nodes(q):
+    return [(s, seg["line"]) for seg in q["hand_path"] for s in seg["stations"]]
+
+
+HAND_CASES = [
+    # (이름, 질문, 답 경로, 맞음, 채운 역, 실제 소요 시간, 조건 어김, 지어낸 역)
+    ("A", "q2", [("서울역", 4), ("동대문역사문화공원", 4), ("동대문역사문화공원", 2), ("잠실", 2)],
+     True, 13, 1440, [], 0),
+    ("B", "q2", [("서울역", 4), ("동대문역사문화공원", 2), ("잠실", 2)],
+     True, 14, 1440, [], 0),
+    ("C", "q2", [("서울역", 1), ("시청", 1), ("시청", 2), ("잠실", 2)],
+     False, 14, 1530, [], 0),
+    ("D", "q2", [("서울역", 1), ("잠실", 2)], False, 0, None, ["경로 끊김"], 0),
+    ("F", "q1", [("강남", 2), ("홍대입구", 2)], True, 16, 1740, [], 0),
+    ("G", "q2", [("서울역", 4), ("없는역", 4), ("잠실", 2)], False, 0, None, ["경로 끊김"], 1),
+]
+
+
+@pytest.mark.parametrize("name,qid,path,correct,filled,actual,violations,invented", HAND_CASES)
+def test_hand_cases(name, qid, path, correct, filled, actual, violations, invented):
+    q = QS[qid]
+    g = grade(REAL, q, Answer(path=path), truth_for(REAL, q))
+    assert g.correct is correct
+    assert g.filled == filled
+    assert g.violations == violations
+    assert g.invented_stations == invented
+    fill = fill_path(REAL, path)
+    assert (path_seconds(REAL, fill[0]) if fill else None) == actual
+
+
+def test_hand_case_E_full_path_is_unchanged():
+    for qid in ("q1", "q2", "q3"):
+        q = QS[qid]
+        g = grade(REAL, q, Answer(path=_hand_nodes(q)), truth_for(REAL, q))
+        assert g.correct and g.filled == 0, qid
+
+
+def test_fill_path_rule2_counts_transfer_node():
+    filled, n = fill_path(REAL, [("서울역", 4), ("동대문역사문화공원", 2)])
+    assert n == 4  # 회현 명동 충무로 + (동대문역사문화공원, 4)
+    assert filled[-2:] == [("동대문역사문화공원", 4), ("동대문역사문화공원", 2)]
+
+
+def test_fill_path_unfillable_returns_none():
+    assert fill_path(REAL, [("서울역", 1), ("잠실", 2)]) is None
+    assert fill_path(REAL, [("서울역", 4), ("없는역", 4)]) is None
+    assert fill_path(REAL, [("서울역", 4), ("서울역", 4)]) is None  # 같은 노드 반복
+
+
+def test_fill_path_small_graph_fills_same_line_stop():
+    # 작은 그래프: 1호선 A-B-C에서 A→C는 B를 채운다. 이전에는 경로 끊김이었다
+    q = _q(max_transfers=0)
+    truth = shortest(G, "A", "C", max_transfers=0)
+    g = grade(G, q, Answer(path=[("A", 1), ("C", 1)]), truth)
+    assert g.filled == 1 and g.violations == [] and g.correct
+
+
+def test_filled_path_is_checked_against_transfer_limit_and_deadline():
+    # 채운 경로로 조건을 잰다: 규칙 2가 넣은 환승 1회가 상한 0을 넘고,
+    # 채운 소요 시간 24분이 시한을 넘는다
+    path = [("서울역", 4), ("동대문역사문화공원", 2), ("잠실", 2)]
+    over = {**QS["q2"], "max_transfers": 0}
+    assert "환승 초과" in grade(REAL, over, Answer(path=path), None).violations
+    late = {**QS["q2"], "depart": "08:00", "arrive_by": "08:10"}
+    assert "시한 초과" in grade(REAL, late, Answer(path=path), None).violations

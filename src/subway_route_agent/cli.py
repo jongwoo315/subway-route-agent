@@ -21,7 +21,8 @@ REPORT_DIR = ROOT / "reports"
 
 def _write_raw(path: Path, results: list[Result]) -> None:
     raw = {r.qid: {"raw": r.answer.raw, "tokens": r.answer.tokens,
-                   "parse_error": r.answer.parse_error} for r in results}
+                   "parse_error": r.answer.parse_error,
+                   "tool_log": r.answer.tool_log} for r in results}
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(raw, ensure_ascii=False, indent=2), encoding="utf-8")
 

@@ -2,12 +2,12 @@ from dataclasses import dataclass
 from itertools import pairwise
 
 from subway_route_agent.answerers import LIMIT_REACHED, Answer
-from subway_route_agent.grade import Grade, path_seconds
+from subway_route_agent.grade import Grade, fill_path, path_seconds
 from subway_route_agent.graph import TRANSFER_SECONDS, Graph
 from subway_route_agent.route import Route
 
 COLUMNS = [
-    "질문", "정답 경로", "정답 시간", "답 있음", "맞음", "지어낸 역",
+    "질문", "정답 경로", "정답 시간", "답 있음", "맞음", "채운 역", "지어낸 역",
     "지어낸 소요 시간", "조건 어김", "도구 호출", "응답 시간(ms)", "토큰",
 ]
 
@@ -79,6 +79,7 @@ def render(
                 format_seconds(r.truth.seconds if r.truth else None),
                 _ox(g.answered),
                 _ox(g.correct),
+                str(g.filled),
                 str(g.invented_stations),
                 str(g.invented_time),
                 ", ".join(g.violations) or "없음",
@@ -91,13 +92,15 @@ def render(
 
 
 COMPARE_DIFF = f"LLM + 도구 지시문에만 환승 {TRANSFER_SECONDS}초와 도구 사용 안내가 있다"
-COMPARE_COLUMNS = ["맞음", "답 경로 소요 시간", "답이 말한 시간"]
+COMPARE_COLUMNS = ["맞음", "채운 역", "답 경로 소요 시간", "답이 말한 시간"]
 
 
 def _path_cell(g: Graph, r: Result) -> str:
     if not r.answer.path:
         return "답 없음"
-    actual = path_seconds(g, [tuple(n) for n in r.answer.path])
+    given = [tuple(n) for n in r.answer.path]
+    fill = fill_path(g, given)  # 채점과 같은 경로로 잰다. 못 채우면 답 경로 그대로
+    actual = path_seconds(g, fill[0] if fill else given)
     return "끊김" if actual is None else format_seconds(actual)
 
 
@@ -121,9 +124,11 @@ def render_compare(
         rs = by_answerer[name]
         said = sum(r.truth is not None and r.answer.seconds == r.truth.seconds for r in rs)
         capped = sum(r.answer.parse_error == LIMIT_REACHED for r in rs)
+        unfilled = sum(r.grade.correct and r.grade.filled == 0 for r in rs)
         who = f"{name} (모델 {models[name]})" if models.get(name) else name
         lines.append(
             f"- {who}: 정답률 {sum(r.grade.correct for r in rs)}/{n}, "
+            f"채우지 않고도 맞은 질문 {unfilled}/{n}, "
             f"파싱 실패 {sum(r.answer.parse_error is not None for r in rs)}/{n}, "
             f"도구 호출 {sum(r.answer.tool_calls for r in rs)}, "
             f"토큰 {sum(r.answer.tokens for r in rs)}, "
@@ -139,6 +144,7 @@ def render_compare(
         cells = [first.qid, format_seconds(first.truth.seconds if first.truth else None)]
         for name in names:
             r = by_answerer[name][i]
-            cells += [_ox(r.grade.correct), _path_cell(g, r), format_seconds(r.answer.seconds)]
+            cells += [_ox(r.grade.correct), str(r.grade.filled), _path_cell(g, r),
+                      format_seconds(r.answer.seconds)]
         lines.append("| " + " | ".join(cells) + " |")
     return "\n".join(lines) + "\n"

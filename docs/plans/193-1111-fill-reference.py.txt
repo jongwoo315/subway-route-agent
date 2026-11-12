@@ -1,0 +1,48 @@
+import json, sys, heapq
+from subway_route_agent.data import load_rows
+from subway_route_agent.graph import build_graph
+from subway_route_agent.grade import grade
+from subway_route_agent.answerers import Answer
+from subway_route_agent.cli import truth_for, QUESTIONS
+
+g = build_graph(load_rows())
+qs = {q["id"]: q for q in json.loads(QUESTIONS.read_text())}
+
+def on_line(a, b, line):
+    s, t = (a, line), (b, line)
+    if s not in g or t not in g: return None
+    pq=[(0,s,(s,))]; seen=set()
+    while pq:
+        d,n,p=heapq.heappop(pq)
+        if n==t: return list(p)
+        if n in seen: continue
+        seen.add(n)
+        for m,w in g[n]:
+            if m[1]==line: heapq.heappush(pq,(d+w,m,p+(m,)))
+    return None
+
+def classify(path):
+    out=[path[0]]; kinds=set()
+    for a,b in zip(path,path[1:]):
+        if any(m==b for m,_ in g.get(a,[])): out.append(b); continue
+        if a[1]==b[1]:
+            seg=on_line(a[0],b[0],a[1])
+            if seg: out+=seg[1:]; kinds.add("중간 역 생략"); continue
+        kinds.add("못 메움"); return None, kinds
+    return out, kinds
+
+for f in sys.argv[1:]:
+    d=json.load(open(f)); tag=f.split("/")[-1]
+    res=[]
+    for qid,r in d.items():
+        try: j=json.loads(r["raw"] or "")
+        except Exception: res.append((qid,"파싱 실패","-")); continue
+        if not j.get("path"): res.append((qid,"빈 경로","-")); continue
+        path=[(s["station"],s["line"]) for s in j["path"]]
+        q=qs[qid]; truth=truth_for(g,q)
+        g0=grade(g,q,Answer(path=path),truth)
+        filled,k=classify(path)
+        if filled is None: res.append((qid,"못 메움","X")); continue
+        g1=grade(g,q,Answer(path=filled),truth)
+        res.append((qid,("그대로 이어짐" if not k else "중간 역 생략"),("O" if g1.correct else "X:"+",".join(g1.violations or ["시간 다름"]))+(" (원래 O)" if g0.correct else "")))
+    print(tag, " | ".join(f"{a}:{b}→{c}" for a,b,c in res))

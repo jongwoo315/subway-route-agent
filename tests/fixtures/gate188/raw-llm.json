@@ -1,0 +1,52 @@
+{
+  "q1": {
+    "raw": "{\"path\":[{\"station\":\"강남\",\"line\":2},{\"station\":\"교대\",\"line\":2},{\"station\":\"시청\",\"line\":2},{\"station\":\"홍대입구\",\"line\":2}],\"seconds\":null}",
+    "tokens": 267,
+    "parse_error": null
+  },
+  "q2": {
+    "raw": "{\"path\":[{\"station\":\"서울역\",\"line\":4},{\"station\":\"회현\",\"line\":4},{\"station\":\"명동\",\"line\":4},{\"station\":\"충무로\",\"line\":4},{\"station\":\"충무로\",\"line\":3},{\"station\":\"종로3가\",\"line\":3},{\"station\":\"을지로3가\",\"line\":2},{\"station\":\"을지로3가\",\"line\":3},{\"station\":\"을지로4가\",\"line\":2},{\"station\":\"동대문역사문화공원\",\"line\":2},{\"station\":\"신당\",\"line\":2},{\"station\":\"왕십리\",\"line\":2},{\"station\":\"상왕십리\",\"line\":2},{\"station\":\"한양대\",\"line\":2},{\"station\":\"뚝섬\",\"line\":2},{\"station\":\"성수\",\"line\":2},{\"station\":\"건대입구\",\"line\":2},{\"station\":\"구의\",\"line\":2},{\"station\":\"강변\",\"line\":2},{\"station\":\"잠실나루\",\"line\":2},{\"station\":\"잠실\",\"line\":2}],\"seconds\":null}",
+    "tokens": 432,
+    "parse_error": null
+  },
+  "q3": {
+    "raw": "{\"path\":[{\"station\":\"방화\",\"line\":5},{\"station\":\"김포공항\",\"line\":5},{\"station\":\"개화산\",\"line\":5},{\"station\":\"송정\",\"line\":5},{\"station\":\"마곡\",\"line\":5},{\"station\":\"발산\",\"line\":5},{\"station\":\"우장산\",\"line\":5},{\"station\":\"화곡\",\"line\":5},{\"station\":\"까치산\",\"line\":5},{\"station\":\"신정\",\"line\":5},{\"station\":\"목동\",\"line\":5},{\"station\":\"오목교\",\"line\":5},{\"station\":\"양평\",\"line\":5},{\"station\":\"영등포구청\",\"line\":5},{\"station\":\"영등포시장\",\"line\":5},{\"station\":\"신길\",\"line\":5},{\"station\":\"여의도\",\"line\":5},{\"station\":\"여의나루\",\"line\":5},{\"station\":\"마포\",\"line\":5},{\"station\":\"공덕\",\"line\":5},{\"station\":\"애오개\",\"line\":5},{\"station\":\"충정로\",\"line\":5},{\"station\":\"서대문\",\"line\":5},{\"station\":\"광화문\",\"line\":5},{\"station\":\"종로3가\",\"line\":5},{\"station\":\"을지로4가\",\"line\":5},{\"station\":\"동대문역사문화공원\",\"line\":5},{\"station\":\"청구\",\"line\":5},{\"station\":\"신금호\",\"line\":5},{\"station\":\"행당\",\"line\":5},{\"station\":\"왕십리\",\"line\":5},{\"station\":\"마장\",\"line\":5},{\"station\":\"답십리\",\"line\":5},{\"station\":\"장한평\",\"line\":5},{\"station\":\"군자\",\"line\":5},{\"station\":\"아차산\",\"line\":5},{\"station\":\"광나루\",\"line\":5},{\"station\":\"천호\",\"line\":5},{\"station\":\"강동\",\"line\":5},{\"station\":\"길동\",\"line\":5},{\"station\":\"굽은다리\",\"line\":5},{\"station\":\"명일\",\"line\":5},{\"station\":\"고덕\",\"line\":5},{\"station\":\"상일동\",\"line\":5},{\"station\":\"둔촌동\",\"line\":5},{\"station\":\"올림픽공원\",\"line\":5},{\"station\":\"방이\",\"line\":5},{\"station\":\"오금\",\"line\":5},{\"station\":\"개롱\",\"line\":5},{\"station\":\"거여\",\"line\":5},{\"station\":\"마천\",\"line\":5}],\"seconds\":null}",
+    "tokens": 711,
+    "parse_error": null
+  },
+  "q4": {
+    "raw": "{\"path\":[{\"station\":\"홍대입구\",\"line\":2},{\"station\":\"합정\",\"line\":2},{\"station\":\"당산\",\"line\":2},{\"station\":\"국회의사당\",\"line\":9},{\"station\":\"여의도\",\"line\":9},{\"station\":\"샛강\",\"line\":9},{\"station\":\"노량진\",\"line\":9},{\"station\":\"노량진\",\"line\":1},{\"station\":\"대방\",\"line\":1},{\"station\":\"신길\",\"line\":1},{\"station\":\"서울역\",\"line\":1}],\"seconds\":null}",
+    "tokens": 328,
+    "parse_error": null
+  },
+  "q5": {
+    "raw": "{\"path\":[{\"station\":\"잠실\",\"line\":2},{\"station\":\"잠실\",\"line\":8},{\"station\":\"천호\",\"line\":8},{\"station\":\"암사\",\"line\":8},{\"station\":\"강동구청\",\"line\":8},{\"station\":\"몽촌토성\",\"line\":8},{\"station\":\"잠실\",\"line\":2},{\"station\":\"을지로입구\",\"line\":2},{\"station\":\"시청\",\"line\":1},{\"station\":\"광화문\",\"line\":5}],\"seconds\":null}",
+    "tokens": 315,
+    "parse_error": null
+  },
+  "q6": {
+    "raw": "{\"path\":[{\"station\":\"건대입구\",\"line\":2},{\"station\":\"성수\",\"line\":2},{\"station\":\"건대입구\",\"line\":7},{\"station\":\"군자\",\"line\":7},{\"station\":\"용마산\",\"line\":7},{\"station\":\"상봉\",\"line\":7},{\"station\":\"태릉입구\",\"line\":7},{\"station\":\"먹골\",\"line\":7},{\"station\":\"중화\",\"line\":7},{\"station\":\"상봉\",\"line\":7},{\"station\":\"하계\",\"line\":7},{\"station\":\"공릉\",\"line\":7},{\"station\":\"태릉입구\",\"line\":7},{\"station\":\"노원\",\"line\":7},{\"station\":\"미아사거리\",\"line\":7},{\"station\":\"건대입구\",\"line\":2},{\"station\":\"뚝섬유원지\",\"line\":2},{\"station\":\"강남\",\"line\":2}],\"seconds\":null}",
+    "tokens": 407,
+    "parse_error": null
+  },
+  "q7": {
+    "raw": "{\"path\":[{\"station\":\"서울역\",\"line\":1},{\"station\":\"시청\",\"line\":1},{\"station\":\"종각\",\"line\":1},{\"station\":\"종로3가\",\"line\":1},{\"station\":\"을지로3가\",\"line\":2},{\"station\":\"을지로입구\",\"line\":2},{\"station\":\"시청\",\"line\":2},{\"station\":\"삼각지\",\"line\":4},{\"station\":\"숙대입구\",\"line\":4},{\"station\":\"남영\",\"line\":1},{\"station\":\"서울역\",\"line\":1},{\"station\":\"시청\",\"line\":1},{\"station\":\"종각\",\"line\":1},{\"station\":\"종로3가\",\"line\":1},{\"station\":\"을지로3가\",\"line\":2},{\"station\":\"을지로입구\",\"line\":2},{\"station\":\"시청\",\"line\":2},{\"station\":\"삼각지\",\"line\":4},{\"station\":\"숙대입구\",\"line\":4},{\"station\":\"남영\",\"line\":1},{\"station\":\"서울역\",\"line\":1},{\"station\":\"시청\",\"line\":1},{\"station\":\"종각\",\"line\":1},{\"station\":\"종로3가\",\"line\":1},{\"station\":\"을지로3가\",\"line\":2},{\"station\":\"을지로입구\",\"line\":2},{\"station\":\"시청\",\"line\":2},{\"station\":\"삼각지\",\"line\":4},{\"station\":\"숙대입구\",\"line\":4},{\"station\":\"남영\",\"line\":1},{\"station\":\"서울역\",\"line\":1},{\"station\":\"시청\",\"line\":1},{\"station\":\"종각\",\"line\":1},{\"station\":\"종로3가\",\"line\":1},{\"station\":\"을지로3가\",\"line\":2},{\"station\":\"을지로입구\",\"line\":2},{\"station\":\"시청\",\"line\":2},{\"station\":\"삼각지\",\"line\":4},{\"station\":\"숙대입구\",\"line\":4},{\"station\":\"남영\",\"line\":1},{\"station\":\"서울역\",\"line\":1}],\"seconds\":null}",
+    "tokens": 620,
+    "parse_error": null
+  },
+  "q8": {
+    "raw": "{\"path\":[{\"station\":\"암사\",\"line\":8},{\"station\":\"천호\",\"line\":8},{\"station\":\"강동구청\",\"line\":8},{\"station\":\"몽촌토성\",\"line\":8},{\"station\":\"잠실\",\"line\":8},{\"station\":\"석촌\",\"line\":8},{\"station\":\"가락시장\",\"line\":8},{\"station\":\"복정\",\"line\":8},{\"station\":\"장지\",\"line\":8},{\"station\":\"문정\",\"line\":8},{\"station\":\"가락시장\",\"line\":3},{\"station\":\"경찰병원\",\"line\":3},{\"station\":\"오금\",\"line\":3},{\"station\":\"송파\",\"line\":3},{\"station\":\"가락시장\",\"line\":8},{\"station\":\"석촌\",\"line\":9},{\"station\":\"종합운동장\",\"line\":9},{\"station\":\"신논현\",\"line\":9},{\"station\":\"고속터미널\",\"line\":9},{\"station\":\"동작\",\"line\":9},{\"station\":\"샛강\",\"line\":9},{\"station\":\"노량진\",\"line\":9},{\"station\":\"여의도\",\"line\":9},{\"station\":\"국회의사당\",\"line\":9},{\"station\":\"당산\",\"line\":9},{\"station\":\"선유도\",\"line\":9},{\"station\":\"신목동\",\"line\":9},{\"station\":\"염창\",\"line\":9},{\"station\":\"증미\",\"line\":9},{\"station\":\"가양\",\"line\":9},{\"station\":\"양천향교\",\"line\":9},{\"station\":\"신방화\",\"line\":9},{\"station\":\"마곡나루\",\"line\":9},{\"station\":\"김포공항\",\"line\":9},{\"station\":\"공항시장\",\"line\":9},{\"station\":\"신방화\",\"line\":9},{\"station\":\"개화\",\"line\":9},{\"station\":\"김포공항\",\"line\":9},{\"station\":\"송정\",\"line\":9},{\"station\":\"마곡나루\",\"line\":9},{\"station\":\"양천향교\",\"line\":9},{\"station\":\"가양\",\"line\":9},{\"station\":\"증미\",\"line\":9},{\"station\":\"염창\",\"line\":9},{\"station\":\"신목동\",\"line\":9},{\"station\":\"선유도\",\"line\":9},{\"station\":\"당산\",\"line\":9},{\"station\":\"국회의사당\",\"line\":9},{\"station\":\"여의도\",\"line\":9},{\"station\":\"노량진\",\"line\":9},{\"station\":\"동작\",\"line\":9},{\"station\":\"고속터미널\",\"line\":9},{\"station\":\"신논현\",\"line\":9},{\"station\":\"종합운동장\",\"line\":9},{\"station\":\"석촌\",\"line\":9},{\"station\":\"잠실\",\"line\":8},{\"station\":\"서울역\",\"line\":1}],\"seconds\":null}",
+    "tokens": 779,
+    "parse_error": null
+  },
+  "q9": {
+    "raw": "{\"path\":[{\"station\":\"수락산\",\"line\":7},{\"station\":\"도봉산\",\"line\":7},{\"station\":\"노원\",\"line\":7},{\"station\":\"태릉입구\",\"line\":7},{\"station\":\"건대입구\",\"line\":7},{\"station\":\"강남구청\",\"line\":7},{\"station\":\"고속터미널\",\"line\":7},{\"station\":\"논현\",\"line\":7},{\"station\":\"총신대입구\",\"line\":7},{\"station\":\"이수\",\"line\":7},{\"station\":\"남성\",\"line\":7},{\"station\":\"상도\",\"line\":7},{\"station\":\"장승배기\",\"line\":7},{\"station\":\"신대방삼거리\",\"line\":7},{\"station\":\"보라매\",\"line\":7},{\"station\":\"신풍\",\"line\":7},{\"station\":\"대림\",\"line\":7},{\"station\":\"남구로\",\"line\":7},{\"station\":\"가산디지털단지\",\"line\":7},{\"station\":\"철산\",\"line\":7},{\"station\":\"광명사거리\",\"line\":7},{\"station\":\"천왕\",\"line\":7},{\"station\":\"온수\",\"line\":7},{\"station\":\"까치울\",\"line\":7},{\"station\":\"부천종합운동장\",\"line\":7},{\"station\":\"춘의\",\"line\":7},{\"station\":\"신중동\",\"line\":7},{\"station\":\"부천시청\",\"line\":7},{\"station\":\"상동\",\"line\":7},{\"station\":\"삼산체육관\",\"line\":7},{\"station\":\"굴포천\",\"line\":7},{\"station\":\"부평구청\",\"line\":7},{\"station\":\"산곡\",\"line\":7},{\"station\":\"석남\",\"line\":7},{\"station\":\"신현\",\"line\":7},{\"station\":\"가정중앙시장\",\"line\":7},{\"station\":\"가정\",\"line\":7},{\"station\":\"인천가좌\",\"line\":7},{\"station\":\"석바위시장\",\"line\":7},{\"station\":\"시민공원\",\"line\":7},{\"station\":\"석바위시장\",\"line\":2},{\"station\":\"시청\",\"line\":2}],\"seconds\":null}",
+    "tokens": 647,
+    "parse_error": null
+  },
+  "q10": {
+    "raw": "{\"path\":[{\"station\":\"홍대입구\",\"line\":2},{\"station\":\"신도림\",\"line\":2},{\"station\":\"당산\",\"line\":2},{\"station\":\"영등포구청\",\"line\":2},{\"station\":\"양천구청\",\"line\":2}],\"seconds\":null}",
+    "tokens": 265,
+    "parse_error": null
+  }
+}
