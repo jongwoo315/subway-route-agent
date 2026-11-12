@@ -109,3 +109,4 @@ def test_count_transfers_flags_default_and_mismatch():
     # 데이터에 값이 있는데 그래프가 180초를 쓰면 (라)다
     c2 = count_transfers(g, {("B", 1, 2): 50})
     assert len(c2.mismatch) == 2 and c2.reverse == 0 and len(c2.default) == 0
+    assert c2.data_stations == 0  # 값이 다른 방향이 있는 환승역은 데이터 환승 시간을 쓴 역이 아니다

@@ -71,7 +71,8 @@ def count_transfers(g: Graph, transfers: Transfers) -> TransferCounts:
     """갈아타는 간선을 환승 데이터와 맞춰 방향 수, 환승역 수, 안 쓰인 데이터 행을 센다."""
     seconds = _by_graph_name(transfers)
     c = TransferCounts()
-    bad: set[str] = set()
+    bad: set[str] = set()  # 180초가 남은 환승역
+    off: set[str] = set()  # 방향 하나라도 (다)·(라)인 환승역
     stations: set[str] = set()
     for (station, a), edges in g.items():
         for (to_station, b), w in edges:
@@ -83,14 +84,16 @@ def count_transfers(g: Graph, transfers: Transfers) -> TransferCounts:
             if fwd is None and rev is None:
                 c.default.append((station, a, b))
                 bad.add(station)
+                off.add(station)
             elif w != (fwd if fwd is not None else rev):
                 c.mismatch.append((station, a, b))
+                off.add(station)
             elif fwd is not None:
                 c.direct += 1
             else:
                 c.reverse += 1
     c.default_stations = sorted(bad)
-    c.data_stations = len(stations - bad)
+    c.data_stations = len(stations - off)
     c.unused_rows = [k for k in transfers
                      if k[1] == k[2] or (ALIASES.get(k[0], k[0]), k[1]) not in g
                      or (ALIASES.get(k[0], k[0]), k[2]) not in g]
