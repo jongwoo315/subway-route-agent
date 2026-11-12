@@ -13,7 +13,7 @@ REAL = build_graph(ROWS)
 QUESTIONS = json.loads((ROOT / "data" / "questions.json").read_text(encoding="utf-8"))
 # 노선도 지식: CSV는 지선을 표시 없이 앞 구간 끝 행 바로 뒤에 이어 붙였다.
 # 지선 첫 역의 실제 앞 역은 분기역이다. (호선, 지선 첫 역) → 분기역.
-# graph.BRANCH_HEADS를 쓰지 않는다. 손 계산은 그래프 코드와 따로다
+# graph.BRANCH_HEADS를 쓰지 않는다. 직접 계산은 그래프 코드와 따로다
 JUNCTIONS = {(2, "용답"): "성수", (2, "도림천"): "신도림", (5, "둔촌동"): "강동"}
 
 
@@ -151,7 +151,7 @@ def test_every_question_has_hand_note_and_hand_path_pairs_with_seconds():
         assert q["hand_note"], q["id"]
         assert ("hand_path" in q) == ("hand_seconds" in q), q["id"]
         if "hand_path" not in q:
-            assert truth_for(REAL, q) is None, q["id"]  # 손 계산이 없는 질문은 정답 없음이다
+            assert truth_for(REAL, q) is None, q["id"]  # 직접 계산한 값이 없는 질문은 정답 없음이다
 
 
 def test_questions_cover_the_cases_the_ticket_names():

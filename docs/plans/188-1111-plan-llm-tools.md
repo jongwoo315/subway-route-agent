@@ -103,7 +103,7 @@
 - 테스트 먼저
   - `find_station("강남")` → 2호선. `find_station("총신대입구")` → `이수`, 4·7호선. 없는 이름 → `found: false`, 후보 목록
   - `line_stations(2)`: 구간 수가 CSV 2호선 행 수 − 1이다. `용답`의 `from`이 `성수`, `도림천`의 `from`이 `신도림`. 마지막 본선 구간이 `충정로→시청`
-  - `travel_seconds(2, "강남", "홍대입구")` = 1740(q1 손 계산 값). `travel_seconds(5, "방화", "마천")` = q3 `hand_seconds`
+  - `travel_seconds(2, "강남", "홍대입구")` = 1740(q1 직접 계산한 값). `travel_seconds(5, "방화", "마천")` = q3 `hand_seconds`
   - 2번 실패 징후: `travel_seconds(2, "서울역", "잠실")` → `error`. `travel_seconds(1, "서울역", "잠실")` → `error`
   - `call_tool("없는도구", "{}")`·`call_tool("travel_seconds", "not json")` → `error`가 든 JSON
 - 커밋: `feature: LLM에게 줄 도구 셋(역 검색, 노선 구간, 한 호선 안 소요 시간)을 더한다`

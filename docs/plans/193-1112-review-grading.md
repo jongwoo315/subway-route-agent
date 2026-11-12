@@ -24,7 +24,7 @@
 | 12 | Suggestion | `src/subway_route_agent/grade.py:54` | `fill_path` docstring에 「갈아타는 역을 한 번 더 쓴 노드도 채운 역 1」과 「같은 노드 반복은 None」이 없다 | 기록만 |
 | 13 | Suggestion | `docs/concepts.md:48` | `경로 끊김`의 못 채우는 이유 목록에 같은 노드 반복이 빠졌다 | 기록만 |
 | 14 | Suggestion | `tests/test_regrade_188.py:26` | 주석 「실패·빈 경로는 답 없음」의 `답 없음`은 용어 절에서 `정답 없음`의 쓰지 말 말이다. 여기서는 답이 빈 것이라 다른 개념이지만 겹쳐 읽힌다 | 기록만 |
-| 15 | Suggestion | `docs/plans/193-1111-plan-grading.md:61` | 「기대값이 표에 있다」의 `기대값`이 `손 계산 값`의 쓰지 말 말과 같은 글자다. 테스트 기대 결과를 뜻해 개념이 다르다 | 기록만 |
+| 15 | Suggestion | `docs/plans/193-1111-plan-grading.md:61` | 「기대값이 표에 있다」의 `기대값`이 `직접 계산한 값`의 쓰지 말 말과 같은 글자다. 테스트 기대 결과를 뜻해 개념이 다르다 | 기록만 |
 | 16 | Suggestion | `tests/test_grade.py:131` | 순환선 반대 방향, 6호선 한 방향, 규칙 2 중 앞 호선이 `via`에 못 닿는 경우, `tool_log` 200자 이하 경계, 머리 줄의 「맞음이고 채운 역 > 0」 반대편 검사가 없다 | 기록만 |
 | 17 | Suggestion | `src/subway_route_agent/answerers.py:124` | `make_llm_tools` docstring이 도구 호출 상한(25)을 빠뜨렸다. 이번 diff가 바꾼 줄이 아니다 | 기록만 | <!-- style-exempt -->
 | 18 | Suggestion | `tests/fixtures/gate188/` | Done criteria의 「diff가 비었다」를 글자 그대로 읽으면 `main...HEAD`에 fixture가 있어 어긋난다. 킥오프 커밋 `7e6af91`이 더한 것이고 그 뒤 바뀐 줄은 없다 | 기록만 |

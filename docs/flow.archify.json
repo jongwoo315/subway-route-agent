@@ -64,7 +64,7 @@
       "col": 1,
       "type": "database",
       "label": "questions.json",
-      "sublabel": "질문 10개, 손 계산 값 8개",
+      "sublabel": "질문 10개, 직접 계산한 값 8개",
       "tag": "그대로",
       "sources": [
         {
@@ -200,7 +200,7 @@
       "lane": "truth",
       "col": 3,
       "type": "database",
-      "label": "손 계산 테스트",
+      "label": "직접 계산하는 테스트",
       "sublabel": "CSV 행만 더해 다익스트라와 맞춘다",
       "tag": "그대로",
       "sources": [
@@ -354,7 +354,7 @@
       "title": "읽는 법",
       "items": [
         "[바뀜]은 PR #4 대비 이번 PR #5가 바꾼 단계다",
-        "손 계산 테스트는 실행 흐름이 아니라 테스트에서만 돈다",
+        "직접 계산하는 테스트는 실행 흐름이 아니라 테스트에서만 돈다",
         "이번 PR부터 GitHub Actions가 PR마다 테스트를 돌린다"
       ]
     }

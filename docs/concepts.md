@@ -14,7 +14,7 @@ plan·리포트·PR 본문·판단 기록에서 쓰는 말이다. 「쓰지 말 
 | 정답률 | 맞은 질문 수 ÷ 질문 수. 맞으려면 답이 있고, 빠진 역을 채운 경로가 이어지고, 조건 어김이 0개이고, 실제 소요 시간이 정답과 같아야 한다 | | Claude | #185, #193에서 고침 |
 | LLM 혼자 | 질문 문장만 받고 역 목록·그래프·도구 없이 답하는 답하는 쪽 | 순수 LLM, 베이스라인 LLM | Claude | #186 |
 | 파싱 실패 | LLM이 돌려준 원문을 정해진 답 형식으로 읽지 못한 것 | 형식 오류, 포맷 에러 | Claude | #186 |
-| 손 계산 값 | 다익스트라를 쓰지 않고 CSV 구간 소요시간을 직접 더해 구한 정답 소요 시간 | 수동 정답, 기대값 | Claude | #187 |
+| 직접 계산한 값 | 다익스트라를 쓰지 않고 CSV 구간 소요시간을 직접 더해 구한 정답 소요 시간 | 손 계산 값, 수동 정답, 기대값 | Claude | #187 |
 | 정답 없음 | 출발역과 도착역은 그래프에 있지만, 환승 상한이나 도착 시한을 지키는 경로가 없는 질문 | 도달 불가, 답 없음 | Claude | #187 | <!-- style-exempt -->
 | LLM + 도구 | 질문 문장과 도구 셋을 받아 도구를 불러 가며 답하는 답하는 쪽 | 에이전트, tool agent | Claude | #188 |
 | 비교 리포트 | 명령 하나로 돌린 답하는 쪽들의 결과를 질문마다 한 줄에 놓은 리포트(`reports/compare.md`) | 대조표 | Claude | #188 |
@@ -37,12 +37,12 @@ plan·리포트·PR 본문·판단 기록에서 쓰는 말이다. 「쓰지 말 
 | `max_transfers` | 조건. 환승 횟수 상한. `None`이면 제한 없음 | `src/subway_route_agent/grade.py:103` | #185 |
 | `depart` | 조건. 출발 시각(`HH:MM`). `arrive_by`와 같이 있을 때만 시한을 잰다. 둘 중 하나만 있으면 시한을 재지 않는다 | `src/subway_route_agent/grade.py:105` | #185 |
 | `arrive_by` | 조건. 도착 시한(`HH:MM`). 출발 시각 + 실제 소요 시간이 이보다 늦으면 어긴 것. `depart`와 같이 있을 때만 잰다 | `src/subway_route_agent/grade.py:105` | #185 |
-| `hand_path` | 질문 필드(선택). 손 계산한 경로. 호선 구간 목록 `[{"line": 2, "stations": [...]}]`이다. 갈아타는 역은 앞 구간의 끝과 다음 구간의 처음에 둘 다 쓴다 | `data/questions.json:10` | #187 |
-| `hand_seconds` | 질문 필드(선택). 손 계산 값(초). CSV 구간 소요시간 합 + 환승 한 번에 180초다. 테스트가 CSV 행만 더해 다시 계산해 `shortest()` 결과와 맞춰 본다 | `data/questions.json:13` | #187 |
+| `hand_path` | 질문 필드(선택). 직접 계산한 경로. 호선 구간 목록 `[{"line": 2, "stations": [...]}]`이다. 갈아타는 역은 앞 구간의 끝과 다음 구간의 처음에 둘 다 쓴다 | `data/questions.json:10` | #187 |
+| `hand_seconds` | 질문 필드(선택). 직접 계산한 값(초). CSV 구간 소요시간 합 + 환승 한 번에 180초다. 테스트가 CSV 행만 더해 다시 계산해 `shortest()` 결과와 맞춰 본다 | `data/questions.json:13` | #187 |
 | `hand_note` | 질문 필드. 계산 과정 한 줄. `hand_path`가 없는 질문에서는 정답이 없는 이유다 | `data/questions.json:14` | #187 |
 | 역 검사 | 실행 전에 질문의 출발·도착역이 그래프에 있는지 본다(별칭은 바꾼 뒤). 하나라도 없으면 `질문 q5: 그래프에 없는 역 — 무슨역`을 stderr에 쓰고 exit 2. 리포트를 쓰지 않는다 | `src/subway_route_agent/cli.py:74` | #187 |
 | 시한을 못 맞추면 정답 없음 | `depart`와 `arrive_by`가 둘 다 있고 최단 경로로도 출발 시각 + 소요 시간이 시한보다 늦으면 `truth_for`가 정답 없음(`None`)을 돌려준다 | `src/subway_route_agent/cli.py:34` | #187 |
-| `손 계산으로 확인한 정답` | 리포트 머리 줄 `K/M`. M = 정답이 있는 질문 수, K = 그중 `hand_seconds`가 있는 질문 수 | `src/subway_route_agent/report.py:68` | #187 |
+| `직접 계산으로 확인한 정답` | 리포트 머리 줄 `K/M`. M = 정답이 있는 질문 수, K = 그중 `hand_seconds`가 있는 질문 수 | `src/subway_route_agent/report.py:68` | #187 |
 | `출발역 다름` | 조건 어김. 답 경로의 첫 역이 질문의 출발역과 다르다 | `src/subway_route_agent/grade.py:97` | #185 |
 | `도착역 다름` | 조건 어김. 답 경로의 끝 역이 질문의 도착역과 다르다 | `src/subway_route_agent/grade.py:99` | #185 |
 | `경로 끊김` | 조건 어김. 채울 수 없을 때만 붙는다 — 답 경로에서 이웃하지 않은 두 노드를 `fill_path`가 못 이었다(같은 호선이 아니고 갈아타는 역을 한 번 쓴 것도 아니거나, 데이터에 없는 노드가 있다). 이웃하지 않아도 채워지면 안 붙는다 | `src/subway_route_agent/grade.py:101` | #185 |

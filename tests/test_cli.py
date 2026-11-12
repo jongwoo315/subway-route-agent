@@ -41,7 +41,7 @@ def test_main_runs_end_to_end(tmp_path, capsys, monkeypatch):
         none = q["id"] in NO_TRUTH
         assert (rows[q["id"]][1] == "없음") == none and (rows[q["id"]][2] == "없음") == none
     assert f"정답률 0/{len(questions)} (0%)" in text
-    assert "- 손 계산으로 확인한 정답: 8/8" in text  # 정답이 있는 8개 모두 손 계산 값이 있다
+    assert "- 직접 계산으로 확인한 정답: 8/8" in text  # 정답이 있는 8개 모두 직접 계산한 값이 있다
     assert rows["q1"][1] == "강남(2) → 홍대입구(2)" and rows["q1"][2] == "29분 0초"
 
 
@@ -174,20 +174,20 @@ def test_render_counts_hand_checked_answers_among_questions_with_truth():
     unchecked = Result("q2", route, Answer(), g, 1.0)
     no_truth = Result("q3", None, Answer(), g, 1.0, hand_checked=True)  # 정답 없음은 세지 않는다
     text = render("t", "d.csv", [checked, unchecked, no_truth])
-    assert "- 손 계산으로 확인한 정답: 1/2" in text
+    assert "- 직접 계산으로 확인한 정답: 1/2" in text
     lines = text.splitlines()
-    assert lines.index("- 파싱 실패 0/3") + 1 == lines.index("- 손 계산으로 확인한 정답: 1/2")
+    assert lines.index("- 파싱 실패 0/3") + 1 == lines.index("- 직접 계산으로 확인한 정답: 1/2")
 
 
 # ---- 여러 답하는 쪽 · 비교 리포트 (#188) ----
 
 _Q1 = json.loads(QUESTIONS.read_text(encoding="utf-8"))[0]
-# q1 손 계산 경로
+# q1 직접 계산한 경로
 GOOD_PATH = [(st, seg["line"]) for seg in _Q1["hand_path"] for st in seg["stations"]]
 
 
 def _fake_answerers(monkeypatch, tmp_path):
-    """API 없이 도는 가짜 답하는 쪽. good은 q1 손 계산 경로를 모든 질문에 말한다."""
+    """API 없이 도는 가짜 답하는 쪽. good은 q1 직접 계산한 경로를 모든 질문에 말한다."""
     from subway_route_agent import cli
     from subway_route_agent.answerers import ANSWERERS
 

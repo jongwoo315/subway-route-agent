@@ -19,7 +19,7 @@ class Result:
     answer: Answer
     grade: Grade
     elapsed_ms: float
-    hand_checked: bool = False  # 질문에 손 계산 값(hand_seconds)이 있다
+    hand_checked: bool = False  # 질문에 직접 계산한 값(hand_seconds)이 있다
 
 
 def format_seconds(sec: int | None) -> str:
@@ -65,7 +65,7 @@ def render(
         f"- 환승 한 번에 {TRANSFER_SECONDS}초로 고정한 stub이다. 기다리는 시간은 0으로 본다",
         f"- 정답률 {hits}/{n} ({rate}%)",
         f"- 파싱 실패 {parse_fails}/{n}",
-        f"- 손 계산으로 확인한 정답: {hand_ok}/{len(with_truth)}",
+        f"- 직접 계산으로 확인한 정답: {hand_ok}/{len(with_truth)}",
         "",
         "| " + " | ".join(COLUMNS) + " |",
         "| " + " | ".join("---" for _ in COLUMNS) + " |",
