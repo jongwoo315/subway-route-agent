@@ -110,3 +110,17 @@ def test_count_transfers_flags_default_and_mismatch():
     c2 = count_transfers(g, {("B", 1, 2): 50})
     assert len(c2.mismatch) == 2 and c2.reverse == 0 and len(c2.default) == 0
     assert c2.data_stations == 0  # 값이 다른 방향이 있는 환승역은 데이터 환승 시간을 쓴 역이 아니다
+
+
+def test_transfer_prefers_own_direction_over_reverse():
+    from subway_route_agent.graph import count_transfers
+
+    rows = [Row(1, "A", 0), Row(1, "B", 60), Row(2, "B", 0), Row(2, "C", 60)]
+    t = {("B", 1, 2): 50, ("B", 2, 1): 70}
+    g = build_graph(rows, transfers=t)
+    assert _edges(g, ("B", 1))[("B", 2)] == 50 and _edges(g, ("B", 2))[("B", 1)] == 70
+    c = count_transfers(g, t)
+    assert (c.direct, c.reverse, c.mismatch) == (2, 0, [])
+    # 한 방향만 있으면 반대 방향 값을 쓴다
+    g2 = build_graph(rows, transfers={("B", 1, 2): 50})
+    assert _edges(g2, ("B", 2))[("B", 1)] == 50
