@@ -234,6 +234,7 @@ def test_two_answerers_write_each_report_and_compare_with_one_row_per_question(
             assert f"{name} {col}" in header
     assert header.startswith("| 질문 | 정답 시간 |")
     assert "지시문에만" not in text  # llm-tools를 돌리지 않았으면 지시문 차이 줄도 없다
+    assert "- 데이터 환승 시간을 쓴 환승역 35개 · 180초가 남은 환승역 0개" in text
     # 질문마다 두 답하는 쪽 값이 다 있다(열 수 = 2 + 4 × 2)
     assert all(len(row.strip("| ").split(" | ")) == 10 for row in table)
 
