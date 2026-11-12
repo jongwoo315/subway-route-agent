@@ -30,3 +30,14 @@ def test_load_transfers_keeps_only_lines_1_to_8():
     assert t[("서울역", 1, 4)] == 133  # 02:13
     # 역 이름은 별칭을 바꾸지 않고 데이터 그대로다
     assert t[("총신대입구", 4, 7)] == 143 and t[("이수", 7, 4)] == 143
+
+
+def test_load_transfers_raises_when_no_line_1_to_8_rows(tmp_path):
+    import pytest
+
+    from subway_route_agent.data import load_transfers
+
+    f = tmp_path / "t.csv"
+    f.write_text("호선,환승역명,환승노선,환승소요시간\n9,A,공항철도,01:00\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="1~8호선 환승 행이 없다"):
+        load_transfers(f)

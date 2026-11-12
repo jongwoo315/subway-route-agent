@@ -37,4 +37,6 @@ def load_transfers(path: Path = TRANSFER_DATA) -> dict[tuple[str, int, int], int
             if m:
                 key = (r["환승역명"].strip(), int(r["호선"]), int(m[1]))
                 out[key] = parse_mmss(r["환승소요시간"])
+    if not out:  # 헤더·노선 표기가 바뀌면 전부 180초로 조용히 돌아가므로 여기서 멈춘다
+        raise ValueError(f"{path.name}에 1~8호선 환승 행이 없다")
     return out
