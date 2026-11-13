@@ -41,7 +41,13 @@ def test_main_runs_end_to_end(tmp_path, capsys, monkeypatch):
         none = q["id"] in NO_TRUTH
         assert (rows[q["id"]][1] == "없음") == none and (rows[q["id"]][2] == "없음") == none
     assert f"정답률 0/{len(questions)} (0%)" in text
-    assert "- 직접 계산으로 확인한 정답: 8/8" in text  # 정답이 있는 8개 모두 직접 계산한 값이 있다
+    assert "- 직접 계산으로 확인한 정답: 8/8" in text
+    # 환승 시간 머리: 출처 한 줄, 환승역 수 한 줄. 실제 그래프는 35개 모두 데이터 값이다
+    assert ("- 환승 시간: 서울교통공사 환승역 거리·소요시간 (data.go.kr 15044419, 2026-08-31 기준, "
+            "최단 환승거리 ÷ 초당 1.2m)") in text
+    assert ("- 데이터 환승 시간을 쓴 환승역 35개 · 180초가 남은 환승역 0개 "
+            "(갈아타는 방향 78개 중 반대 방향 값 1개). 기다리는 시간은 0으로 본다") in text
+    assert "고정한 stub" not in text  # 정답이 있는 8개 모두 직접 계산한 값이 있다
     assert rows["q1"][1] == "강남(2) → 홍대입구(2)" and rows["q1"][2] == "29분 0초"
 
 
@@ -228,6 +234,7 @@ def test_two_answerers_write_each_report_and_compare_with_one_row_per_question(
             assert f"{name} {col}" in header
     assert header.startswith("| 질문 | 정답 시간 |")
     assert "지시문에만" not in text  # llm-tools를 돌리지 않았으면 지시문 차이 줄도 없다
+    assert "- 데이터 환승 시간을 쓴 환승역 35개 · 180초가 남은 환승역 0개" in text
     # 질문마다 두 답하는 쪽 값이 다 있다(열 수 = 2 + 4 × 2)
     assert all(len(row.strip("| ").split(" | ")) == 10 for row in table)
 
@@ -262,7 +269,8 @@ def test_compare_head_counts_calls_tokens_seconds_match_and_limit(monkeypatch, t
 
     reports = _fake_answerers(monkeypatch, tmp_path)
     monkeypatch.setattr(cli, "QUESTIONS", _write_questions(tmp_path, [
-        _question("a", "강남", "홍대입구"), _question("b", "강남", "홍대입구")]))
+        _question("a", "강남", "홍대입구", max_transfers=1),
+        _question("b", "강남", "홍대입구", max_transfers=1)]))  # q1과 같은 조건
     answers = iter([Answer(path=GOOD_PATH, seconds=1740, tool_calls=3, tokens=10),
                     Answer(parse_error=LIMIT_REACHED, tool_calls=25, tokens=90)])
     monkeypatch.setitem(ANSWERERS, "capped", lambda text: next(answers))
@@ -354,11 +362,25 @@ def test_render_compare_unit_head_and_rows():
         "11분 0초", "O", "0", "11분 0초", "11분 0초", "X", "0", "답 없음", "없음"]
 
 
+def test_render_heads_name_stations_that_keep_180_seconds():
+    from subway_route_agent.graph import count_transfers
+
+    g = build_graph([Row(1, "A", 0), Row(1, "B", 60), Row(2, "B", 0), Row(2, "C", 60)],
+                    transfers={})
+    counts = count_transfers(g, {})
+    r = Result("q1", None, Answer(), Grade(False, False), 0.0)
+    line = ("- 데이터 환승 시간을 쓴 환승역 0개 · 180초가 남은 환승역 1개(B) "
+            "(갈아타는 방향 2개 중 반대 방향 값 0개). 기다리는 시간은 0으로 본다")
+    assert line in render("t", "d.csv", [r], counts=counts)
+    assert line in render_compare("d.csv", {"x": [r]}, {}, g, counts=counts)
+
+
 def test_render_compare_shows_instruction_difference_only_with_llm_tools():
     g = build_graph([Row(1, "A", 0), Row(1, "B", 60)])
     r = Result("q1", None, Answer(), Grade(False, False), 0.0)
     with_tools = render_compare("d.csv", {"stub": [r], "llm-tools": [r]}, {}, g)
-    assert "- LLM + 도구 지시문에만 환승 180초와 도구 사용 안내가 있다" in with_tools
+    assert ("- LLM + 도구 지시문에만 도구 사용 안내와 「환승 시간은 역과 호선마다 다르다」 "
+            "문장이 있다") in with_tools
     without = render_compare("d.csv", {"stub": [r], "llm": [r]}, {}, g)
     assert "지시문에만" not in without
 

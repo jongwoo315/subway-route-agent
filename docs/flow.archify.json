@@ -9,7 +9,7 @@
     "repository": {
       "url": "https://github.com/jongwoo315/subway-route-agent",
       "provider": "github",
-      "revision": "1f539f3ae78c9b3e8cec728849275e41c8c5771d"
+      "revision": "5b437df7e00b708229af075269284f1639a75f32"
     }
   },
   "lanes": [
@@ -64,8 +64,8 @@
       "col": 1,
       "type": "database",
       "label": "questions.json",
-      "sublabel": "질문 10개, 직접 계산한 값 8개",
-      "tag": "그대로",
+      "sublabel": "[바뀜] 5개 직접 계산한 값",
+      "tag": "조건 바뀜",
       "sources": [
         {
           "path": "data/questions.json",
@@ -79,12 +79,12 @@
       "col": 1,
       "type": "backend",
       "label": "build_graph",
-      "sublabel": "지선·별칭·환승 180초",
-      "tag": "그대로",
+      "sublabel": "[바뀜] 환승 = 데이터 값",
+      "tag": "조건 바뀜",
       "sources": [
         {
           "path": "src/subway_route_agent/graph.py",
-          "line": 19,
+          "line": 27,
           "label": "build_graph"
         }
       ]
@@ -131,8 +131,8 @@
       "col": 3,
       "type": "security",
       "label": "grade",
-      "sublabel": "[바뀜] 빠진 역을 채운 뒤 판정",
-      "tag": "조건 바뀜",
+      "sublabel": "빠진 역을 채운 뒤 판정",
+      "tag": "그대로",
       "sources": [
         {
           "path": "src/subway_route_agent/grade.py",
@@ -151,13 +151,23 @@
       "col": 4,
       "type": "backend",
       "label": "리포트",
-      "sublabel": "[바뀜] 채운 역 열",
+      "sublabel": "[바뀜] 환승역 수 줄",
       "tag": "조건 바뀜",
       "sources": [
         {
           "path": "src/subway_route_agent/report.py",
-          "line": 48,
+          "line": 65,
           "label": "render"
+        },
+        {
+          "path": "src/subway_route_agent/report.py",
+          "line": 44,
+          "label": "transfer_head"
+        },
+        {
+          "path": "src/subway_route_agent/graph.py",
+          "line": 70,
+          "label": "count_transfers"
         }
       ]
     },
@@ -173,10 +183,6 @@
         {
           "path": "src/subway_route_agent/answerers.py",
           "line": 81
-        },
-        {
-          "path": "src/subway_route_agent/answerers.py",
-          "line": 32
         }
       ]
     },
@@ -191,7 +197,7 @@
       "sources": [
         {
           "path": "src/subway_route_agent/cli.py",
-          "line": 76
+          "line": 81
         }
       ]
     },
@@ -201,12 +207,13 @@
       "col": 3,
       "type": "database",
       "label": "직접 계산하는 테스트",
-      "sublabel": "CSV 행만 더해 다익스트라와 맞춘다",
-      "tag": "그대로",
+      "sublabel": "[바뀜] 환승 CSV도 더한다",
+      "tag": "조건 바뀜",
       "sources": [
         {
           "path": "tests/test_route.py",
-          "line": 1
+          "line": 63,
+          "label": "_csv_seconds"
         }
       ]
     },
@@ -216,12 +223,13 @@
       "col": 4,
       "type": "frontend",
       "label": "llm-tools — LLM + 도구",
-      "sublabel": "[바뀜] 도구 호출 기록을 --raw에",
+      "sublabel": "[바뀜] 180초 문장 삭제",
       "tag": "조건 바뀜",
       "sources": [
         {
           "path": "src/subway_route_agent/answerers.py",
-          "line": 123
+          "line": 115,
+          "label": "TOOLS_SYSTEM"
         }
       ]
     },
@@ -250,12 +258,29 @@
       "col": 5,
       "type": "security",
       "label": "비교 리포트",
-      "sublabel": "질문마다 한 줄에 나란히",
-      "tag": "그대로",
+      "sublabel": "[바뀜] 환승역 수 줄",
+      "tag": "조건 바뀜",
       "sources": [
         {
           "path": "src/subway_route_agent/report.py",
-          "line": 107
+          "line": 126,
+          "label": "render_compare"
+        }
+      ]
+    },
+    {
+      "id": "tcsv",
+      "lane": "truth",
+      "col": 0,
+      "type": "database",
+      "label": "환승역 CSV",
+      "sublabel": "[새로] 환승 시간 데이터",
+      "tag": "새로 생김",
+      "sources": [
+        {
+          "path": "src/subway_route_agent/data.py",
+          "line": 31,
+          "label": "load_transfers"
         }
       ]
     }
@@ -346,6 +371,12 @@
       "from": "report",
       "to": "compare",
       "label": "둘 이상이면"
+    },
+    {
+      "id": "i1",
+      "from": "tcsv",
+      "to": "graph",
+      "label": "환승 시간"
     }
   ],
   "cards": [
@@ -353,9 +384,9 @@
       "dot": "cyan",
       "title": "읽는 법",
       "items": [
-        "[바뀜]은 PR #4 대비 이번 PR #5가 바꾼 단계다",
+        "[새로]·[바뀜]은 PR #5 대비 이번 PR #6이 바꾼 단계다",
         "직접 계산하는 테스트는 실행 흐름이 아니라 테스트에서만 돈다",
-        "이번 PR부터 GitHub Actions가 PR마다 테스트를 돌린다"
+        "180초는 환승역 데이터에 양쪽 값이 다 없는 방향에만 쓴다. 지금 0개다"
       ]
     }
   ]

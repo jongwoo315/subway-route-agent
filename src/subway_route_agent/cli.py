@@ -8,9 +8,9 @@ from pathlib import Path
 import openai
 
 from subway_route_agent.answerers import ANSWERERS, MODEL, TOOL_CALL_LIMIT
-from subway_route_agent.data import DATA, ROOT, load_rows
+from subway_route_agent.data import DATA, ROOT, load_rows, load_transfers
 from subway_route_agent.grade import _minutes, grade
-from subway_route_agent.graph import ALIASES, Graph, build_graph
+from subway_route_agent.graph import ALIASES, Graph, build_graph, count_transfers
 from subway_route_agent.report import Result, render, render_compare
 from subway_route_agent.route import Route, shortest
 from subway_route_agent.tools import TOOLS
@@ -68,7 +68,9 @@ def main(argv: list[str] | None = None) -> int:
         print("OPENAI_API_KEY가 없다", file=sys.stderr)
         return 2
 
-    g = build_graph(load_rows())
+    transfers = load_transfers()
+    g = build_graph(load_rows(), transfers)
+    counts = count_transfers(g, transfers)
     questions = json.loads(QUESTIONS.read_text(encoding="utf-8"))
     stations = {n[0] for n in g}
     missing = [(q["id"], s) for q in questions for s in (q["origin"], q["dest"])
@@ -101,13 +103,13 @@ def main(argv: list[str] | None = None) -> int:
 
     models = {n: MODEL if n in LLM_ANSWERERS else None for n in names}
     for name, results in by_answerer.items():
-        text = render(name, DATA.name, results, models[name], _notes(name))
+        text = render(name, DATA.name, results, models[name], _notes(name), counts)
         out = args.out if args.out and not many else REPORT_DIR / f"{name}.md"
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_text(text, encoding="utf-8")
         print(text, end="")
     if many:
-        text = render_compare(DATA.name, by_answerer, models, g)
+        text = render_compare(DATA.name, by_answerer, models, g, counts)
         out = args.out or REPORT_DIR / "compare.md"
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_text(text, encoding="utf-8")

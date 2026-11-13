@@ -4,7 +4,6 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from functools import cache
 
-from subway_route_agent.graph import TRANSFER_SECONDS
 from subway_route_agent.tools import TOOLS, call_tool
 
 
@@ -116,7 +115,7 @@ LIMIT_REACHED = f"도구 호출 상한({TOOL_CALL_LIMIT})에 닿았다"  # 리�
 TOOLS_SYSTEM = (
     SYSTEM
     + " 도구로 역·노선·한 호선 안 소요 시간을 확인할 수 있다."
-    + f" 환승 한 번은 {TRANSFER_SECONDS}초다. 경로는 직접 고른다."
+    + " 환승 시간은 역과 호선마다 다르다. 경로는 직접 고른다."
 )
 
 

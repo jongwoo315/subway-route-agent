@@ -12,7 +12,6 @@ from subway_route_agent.answerers import (
     make_llm_tools,
 )
 from subway_route_agent.data import ROOT
-from subway_route_agent.graph import TRANSFER_SECONDS
 from subway_route_agent.tools import TOOLS
 
 GOOD = json.dumps({
@@ -168,8 +167,9 @@ def test_missing_usage_counts_zero_tokens():
     assert make_llm_tools(FakeClient([resp]))("질문").tokens == 0
 
 
-def test_tools_system_has_transfer_seconds_and_no_station_hints():
-    assert f"{TRANSFER_SECONDS}초" in TOOLS_SYSTEM
+def test_tools_system_says_transfer_time_varies_and_has_no_station_hints():
+    assert "180" not in TOOLS_SYSTEM  # 틀린 값을 주지 않는다
+    assert "환승 시간은 역과 호선마다 다르다." in TOOLS_SYSTEM
     assert TOOLS_SYSTEM.startswith(answerers.SYSTEM)  # 답 형식 설명은 LLM 혼자와 같다
     for hint in ["동대문역사문화공원", "서울역", "잠실", "홍대입구", "강남", "마천", "방화"]:
         assert hint not in TOOLS_SYSTEM

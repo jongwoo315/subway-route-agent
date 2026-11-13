@@ -1,3 +1,4 @@
+import csv
 import json
 from itertools import pairwise
 
@@ -5,7 +6,7 @@ import pytest
 
 from subway_route_agent.cli import truth_for
 from subway_route_agent.data import ROOT, Row, load_rows
-from subway_route_agent.graph import TRANSFER_SECONDS, build_graph
+from subway_route_agent.graph import build_graph
 from subway_route_agent.route import shortest
 
 ROWS = load_rows()
@@ -15,6 +16,10 @@ QUESTIONS = json.loads((ROOT / "data" / "questions.json").read_text(encoding="ut
 # 지선 첫 역의 실제 앞 역은 분기역이다. (호선, 지선 첫 역) → 분기역.
 # graph.BRANCH_HEADS를 쓰지 않는다. 직접 계산은 그래프 코드와 따로다
 JUNCTIONS = {(2, "용답"): "성수", (2, "도림천"): "신도림", (5, "둔촌동"): "강동"}
+# 환승 CSV도 csv 모듈로 직접 읽는다. 같은 역인데 노선마다 이름이 다르다(graph.ALIASES를 쓰지 않는다)
+SAME_STATION = {"총신대입구": "이수"}
+with open(ROOT / "data" / "seoul_metro_transfer_260831.csv", encoding="utf-8", newline="") as _f:
+    TRANSFER_ROWS = list(csv.DictReader(_f))
 
 
 def _hop_seconds(line: int, a: str, b: str) -> int:
@@ -37,6 +42,24 @@ def _hop_seconds(line: int, a: str, b: str) -> int:
     raise AssertionError(f"{line}호선에 {a}-{b} 이웃이 CSV에 없다")
 
 
+def _transfer_seconds(station: str, a: int, b: int) -> int:
+    """환승 CSV만 보고 a→b호선 환승 시간(초)을 구한다. 그 방향 → 반대 방향, 둘 다 없으면 실패."""
+
+    def find(src: int, dst: int) -> int | None:
+        for r in TRANSFER_ROWS:
+            name = r["환승역명"].strip()
+            if (SAME_STATION.get(name, name) == station and r["호선"] == str(src)
+                    and r["환승노선"] == f"{dst}호선"):
+                minutes, secs = r["환승소요시간"].split(":")
+                return int(minutes) * 60 + int(secs)
+        return None
+
+    for sec in (find(a, b), find(b, a)):
+        if sec is not None:
+            return sec
+    raise AssertionError(f"{station} {a}→{b}호선 환승이 환승 CSV에 없다")
+
+
 def _csv_seconds(hand_path: list[dict]) -> int:
     """`build_graph`·`shortest` 없이 CSV 행만으로 hand_path의 소요 시간을 더한다."""
     total = 0
@@ -44,7 +67,7 @@ def _csv_seconds(hand_path: list[dict]) -> int:
         if k and hand_path[k - 1]["stations"][-1] != seg["stations"][0]:
             raise AssertionError(f"환승역이 이어지지 않는다: {seg['stations'][0]}")
         if k:
-            total += TRANSFER_SECONDS
+            total += _transfer_seconds(seg["stations"][0], hand_path[k - 1]["line"], seg["line"])
         total += sum(_hop_seconds(seg["line"], a, b) for a, b in pairwise(seg["stations"]))
     return total
 
@@ -79,14 +102,24 @@ def test_hand_sum_follows_loop_branch_and_one_way_rules():
                       {"line": 2, "stations": ["시청", "을지로입구"]}])
 
 
+def test_transfer_seconds_follows_direction_rule():
+    assert _transfer_seconds("이수", 4, 7) == 143 == _transfer_seconds("이수", 7, 4)  # 총신대입구
+    assert _transfer_seconds("까치산", 5, 2) == 14  # 데이터에 있는 방향
+    assert _transfer_seconds("까치산", 2, 5) == 14  # 데이터에 없는 방향은 반대 방향 값
+    with pytest.raises(AssertionError):
+        _transfer_seconds("서울역", 2, 3)  # 양쪽 다 없다
+    with pytest.raises(AssertionError):
+        _transfer_seconds("없는역", 1, 2)
+
+
 def test_transfer_limit_forces_slower_route():
     rows = [
         Row(1, "A", 0), Row(1, "B", 60), Row(1, "C", 600),
         Row(2, "B", 0), Row(2, "C", 60),
     ]
-    g = build_graph(rows)
+    g = build_graph(rows, transfers={})
     fast = shortest(g, "A", "C")
-    assert fast.transfers == 1 and fast.seconds == 60 + 180 + 60
+    assert fast.transfers == 1 and fast.seconds == 60 + 180 + 60  # 가짜 역은 180초
     direct = shortest(g, "A", "C", max_transfers=0)
     assert direct.transfers == 0 and direct.seconds == 660
 
