@@ -90,7 +90,7 @@
 - `TOOLS`를 두 목록으로 나눈다: `FINE_TOOLS`(지금 셋 + `transfer_seconds`), `COARSE_TOOLS`(`route_seconds` 하나). `route_seconds`의 `path` 파라미터 schema는 `answerers.SCHEMA`의 path와 같은 구조로 `tools.py` 안에 쓴다(answerers를 import하지 않는다)
 - `call_tool(name, arguments, tools)`: 받은 도구 목록에 없는 이름은 `{"error": "모르는 도구: …"}`. 인자 형식 검사를 `path`(dict 목록, 각 dict가 `station: str`·`line: int`)까지 넓힌다
 - 테스트(실제 데이터):
-  - `transfer_seconds("이수", 4, 7)` = 환승 CSV의 이수 4→7 값(테스트가 CSV를 `csv` 모듈로 읽어 기대값으로 쓴다), `transfer_seconds("까치산", 2, 5)` = CSV의 5→2 값, `transfer_seconds("강남", 2, 3)` → error
+  - `transfer_seconds("이수", 4, 7)` = 환승 CSV의 이수 4→7 값(테스트가 CSV를 `csv` 모듈로 읽어 비교할 값으로 쓴다), `transfer_seconds("까치산", 2, 5)` = CSV의 5→2 값, `transfer_seconds("강남", 2, 3)` → error
   - `route_seconds`: q2 정답 경로를 출발·갈아타는 역·도착만 남겨 넘기면 `cli.truth_for` 정답 소요 시간·환승 수와 같다. 없는 역 → `candidates`, 호선이 틀린 역 → `lines`, 이을 수 없는 경로 → error에 몇 번째인지
   - 출력 키 고정: 위 네 경우의 출력 키가 `{seconds, transfers, error, candidates, lines}` 안에 있다
   - `call_tool`: 다른 구성의 도구 이름을 부르면 모르는 도구 오류, `path` 형식이 틀리면 형식 오류
