@@ -49,7 +49,7 @@ plan·리포트·PR 본문·판단 기록에서 쓰는 말이다. 「쓰지 말 
 | `hand_note` | 질문 필드. 계산 과정 한 줄. `hand_path`가 없는 질문에서는 정답이 없는 이유다 | `data/questions.json:14` | #187 |
 | 역 검사 | 실행 전에 질문의 출발·도착역이 그래프에 있는지 본다(별칭은 바꾼 뒤). 하나라도 없으면 `질문 q5: 그래프에 없는 역 — 무슨역`을 stderr에 쓰고 exit 2. 리포트를 쓰지 않는다 | `src/subway_route_agent/cli.py:90` | #187 |
 | 시한을 못 맞추면 정답 없음 | `depart`와 `arrive_by`가 둘 다 있고 최단 경로로도 출발 시각 + 소요 시간이 시한보다 늦으면 `truth_for`가 정답 없음(`None`)을 돌려준다 | `src/subway_route_agent/cli.py:34` | #187 |
-| `직접 계산으로 확인한 정답` | 리포트 머리 줄 `K/M`. M = 정답이 있는 질문 수, K = 그중 `hand_seconds`가 있는 질문 수 | `src/subway_route_agent/report.py:85` | #187 |
+| `직접 계산으로 확인한 정답` | 리포트 머리 줄 `K/M`. M = 정답이 있는 질문 수, K = 그중 `hand_seconds`가 있는 질문 수 | `src/subway_route_agent/report.py:86` | #187 |
 | `출발역 다름` | 조건 어김. 답 경로의 첫 역이 질문의 출발역과 다르다 | `src/subway_route_agent/grade.py:97` | #185 |
 | `도착역 다름` | 조건 어김. 답 경로의 끝 역이 질문의 도착역과 다르다 | `src/subway_route_agent/grade.py:99` | #185 |
 | `경로 끊김` | 조건 어김. 채울 수 없을 때만 붙는다 — 답 경로에서 이웃하지 않은 두 노드를 `fill_path`가 못 이었다(같은 호선이 아니고 갈아타는 역을 한 번 쓴 것도 아니거나, 데이터에 없는 노드가 있다). 이웃하지 않아도 채워지면 안 붙는다 | `src/subway_route_agent/grade.py:101` | #185 |
