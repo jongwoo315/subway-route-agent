@@ -505,6 +505,13 @@ def test_single_answerer_report_uses_the_last_round(monkeypatch, tmp_path):
     assert main(["--answerer", "grow", "--repeat", "3"]) == 0
     text = (reports / "grow.md").read_text(encoding="utf-8")
     assert {c["도구 호출"] for c in _cells(text).values()} == {"2"}  # 회차 3(0부터 2)
+    assert "- 3회 중 마지막 회차 결과다" in text  # 한 회차만 보인다는 것을 리포트가 말한다
+
+
+def test_report_has_no_last_round_note_when_run_once(monkeypatch, tmp_path):
+    reports = _fake_answerers(monkeypatch, tmp_path)
+    assert main(["--answerer", "good"]) == 0
+    assert "마지막 회차" not in (reports / "good.md").read_text(encoding="utf-8")
 
 
 def test_repeat_two_compare_has_per_round_metric_table_and_range_rows(monkeypatch, tmp_path):

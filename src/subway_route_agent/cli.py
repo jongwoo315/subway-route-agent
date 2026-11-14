@@ -119,7 +119,10 @@ def main(argv: list[str] | None = None) -> int:
 
     models = {n: MODEL if n in LLM_ANSWERERS else None for n in names}
     for name, rounds in by_answerer.items():
-        text = render(name, DATA.name, rounds[-1], models[name], _notes(name), counts)
+        notes = _notes(name)
+        if args.repeat > 1:
+            notes.append(f"{args.repeat}회 중 마지막 회차 결과다")
+        text = render(name, DATA.name, rounds[-1], models[name], notes, counts)
         out = args.out if args.out and not many else REPORT_DIR / f"{name}.md"
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_text(text, encoding="utf-8")
