@@ -93,7 +93,7 @@
   - `transfer_seconds("이수", 4, 7)` = 환승 CSV의 이수 4→7 값(테스트가 CSV를 `csv` 모듈로 읽어 비교할 값으로 쓴다), `transfer_seconds("까치산", 2, 5)` = CSV의 5→2 값, `transfer_seconds("강남", 2, 3)` → error
   - `route_seconds`: q2 정답 경로를 출발·갈아타는 역·도착만 남겨 넘기면 `cli.truth_for` 정답 소요 시간·환승 수와 같다. 없는 역 → `candidates`, 호선이 틀린 역 → `lines`, 이을 수 없는 경로 → error에 몇 번째인지
   - 출력 키 고정: 위 네 경우의 출력 키가 `{seconds, transfers, error, candidates, lines}` 안에 있다
-  - `call_tool`: 다른 구성의 도구 이름을 부르면 모르는 도구 오류, `path` 형식이 틀리면 형식 오류
+  - `call_tool`: 다른 구성의 도구 이름을 부르면 모르는 도구 오류, `path` 인자 형식이 틀리면 인자 오류
 - 커밋: `feature: 환승 시간 도구와 경로 소요 시간 도구를 더한다`
 
 ### Task 2: 크게 묶은 도구를 받는 답하는 쪽
