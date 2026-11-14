@@ -607,7 +607,7 @@ def test_compare_head_names_both_tool_sets_and_coarse_limit_only_when_present():
 
 
 def test_coarse_report_names_its_tools(monkeypatch, tmp_path):
-    from subway_route_agent.answerers import ANSWERERS
+    from subway_route_agent.answerers import ANSWERERS, MODEL
 
     reports = _fake_answerers(monkeypatch, tmp_path)
     monkeypatch.setenv("OPENAI_API_KEY", "dummy")
@@ -615,7 +615,7 @@ def test_coarse_report_names_its_tools(monkeypatch, tmp_path):
     assert main(["--answerer", "llm-tools-coarse"]) == 0
     text = (reports / "llm-tools-coarse.md").read_text(encoding="utf-8")
     assert "- 도구: route_seconds (호출 상한 25)" in text
-    assert "모델" in text
+    assert f"- 답하는 쪽: llm-tools-coarse (모델 {MODEL})" in text
 
 
 def test_coarse_without_key_exits_2(monkeypatch, tmp_path, capsys):
