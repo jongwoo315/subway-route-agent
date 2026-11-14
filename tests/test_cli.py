@@ -645,3 +645,11 @@ def test_api_error_in_round_two_keeps_round_one_raw_and_writes_no_report(monkeyp
     assert (tmp_path / "raw-llm-tools-1.json").exists()
     assert json.loads((tmp_path / "raw-llm-tools-2.json").read_text("utf-8")) == {}
     assert not reports.exists()
+
+
+def test_render_compare_with_repeat_names_each_model_in_the_head():
+    g = build_graph([Row(1, "A", 0), Row(1, "B", 60)])
+    r = [[_result("q1", True)], [_result("q1", True)]]
+    text = render_compare("d.csv", {"x": r, "stub": r}, {"x": "gpt-test", "stub": None}, g)
+    assert "- x (모델 gpt-test)" in text
+    assert "stub (모델" not in text  # 모델이 없는 답하는 쪽은 줄이 없다

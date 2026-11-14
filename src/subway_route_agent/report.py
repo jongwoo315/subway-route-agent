@@ -216,6 +216,7 @@ def render_compare(
     else:
         lines.append(f"- 같은 질문 {n}개를 답하는 쪽마다 {n_rounds}번 돌렸다. "
                      "범위는 지표마다 회차 중 최저~최고다")
+        lines += [f"- {name} (모델 {models[name]})" for name in names if models.get(name)]
         metric_columns = ["답하는 쪽", "회차", *METRIC_COLUMNS]
         lines += ["", "| " + " | ".join(metric_columns) + " |",
                   "| " + " | ".join("---" for _ in metric_columns) + " |"]
