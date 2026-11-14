@@ -323,7 +323,8 @@ def test_llm_tools_report_names_model_and_tools(monkeypatch, tmp_path):
     assert main(["--answerer", "llm-tools"]) == 0
     text = (reports / "llm-tools.md").read_text(encoding="utf-8")
     assert f"- 답하는 쪽: llm-tools (모델 {answerers.MODEL})" in text
-    assert "- 도구: find_station, line_stations, travel_seconds (호출 상한 25)" in text
+    assert ("- 도구: find_station, line_stations, travel_seconds, transfer_seconds "
+            "(호출 상한 25)") in text
     assert _cells(text)["q1"]["도구 호출"] == "4"
 
 
@@ -354,7 +355,7 @@ def test_render_compare_unit_head_and_rows():
     hit = Result("q1", truth, Answer(path=path, seconds=660, tool_calls=1, tokens=5),
                  Grade(True, True), 2000.0)
     miss = Result("q1", truth, Answer(), Grade(False, False), 500.0)
-    text = render_compare("d.csv", {"x": [hit], "y": [miss]}, {"x": "m1", "y": None}, g)
+    text = render_compare("d.csv", {"x": [[hit]], "y": [[miss]]}, {"x": "m1", "y": None}, g)
     assert "- x (모델 m1): 정답률 1/1" in text and "- y: 정답률 0/1" in text
     assert "응답 시간 합 2.0초" in text and "응답 시간 합 0.5초" in text
     row = next(line for line in text.splitlines() if line.startswith("| q1"))
@@ -372,16 +373,16 @@ def test_render_heads_name_stations_that_keep_180_seconds():
     line = ("- 데이터 환승 시간을 쓴 환승역 0개 · 180초가 남은 환승역 1개(B) "
             "(갈아타는 방향 2개 중 반대 방향 값 0개). 기다리는 시간은 0으로 본다")
     assert line in render("t", "d.csv", [r], counts=counts)
-    assert line in render_compare("d.csv", {"x": [r]}, {}, g, counts=counts)
+    assert line in render_compare("d.csv", {"x": [[r]]}, {}, g, counts=counts)
 
 
 def test_render_compare_shows_instruction_difference_only_with_llm_tools():
     g = build_graph([Row(1, "A", 0), Row(1, "B", 60)])
     r = Result("q1", None, Answer(), Grade(False, False), 0.0)
-    with_tools = render_compare("d.csv", {"stub": [r], "llm-tools": [r]}, {}, g)
-    assert ("- LLM + 도구 지시문에만 도구 사용 안내와 「환승 시간은 역과 호선마다 다르다」 "
-            "문장이 있다") in with_tools
-    without = render_compare("d.csv", {"stub": [r], "llm": [r]}, {}, g)
+    with_tools = render_compare("d.csv", {"stub": [[r]], "llm-tools": [[r]]}, {}, g)
+    assert ("- LLM + 도구 지시문에만 도구 안내 한 문장과 「환승 시간은 역과 호선마다 다르다. "
+            "경로는 직접 고른다」 문장이 있다") in with_tools
+    without = render_compare("d.csv", {"stub": [[r]], "llm": [[r]]}, {}, g)
     assert "지시문에만" not in without
 
 
@@ -389,7 +390,7 @@ def test_render_compare_does_not_count_empty_answer_as_matching_no_truth_questio
     # 정답 없음 질문(truth=None)에서 말한 시간도 None이어도 「정답과 같은 질문」으로 세지 않는다
     g = build_graph([Row(1, "A", 0), Row(1, "B", 60)])
     r = Result("q6", None, Answer(), Grade(False, False), 0.0)
-    text = render_compare("d.csv", {"stub": [r], "llm": [r]}, {}, g)
+    text = render_compare("d.csv", {"stub": [[r]], "llm": [[r]]}, {}, g)
     assert "답이 말한 시간이 정답과 같은 질문 0/1" in text
 
 
@@ -409,7 +410,7 @@ def test_compare_head_counts_correct_answers_without_filling():
     full = Result("q1", truth, Answer(), Grade(True, True, filled=0), 1.0)
     filled = Result("q2", truth, Answer(), Grade(True, True, filled=2), 1.0)
     wrong = Result("q3", truth, Answer(), Grade(True, False, filled=0), 1.0)
-    text = render_compare("d.csv", {"x": [full, filled, wrong]}, {}, g)
+    text = render_compare("d.csv", {"x": [[full, filled, wrong]]}, {}, g)
     line = next(ln for ln in text.splitlines() if ln.startswith("- x:"))
     assert "정답률 2/3" in line and "채우지 않고도 맞은 질문 1/3" in line
     assert _cells(text)["q2"]["x 채운 역"] == "2"
@@ -425,3 +426,230 @@ def test_raw_file_has_tool_log(monkeypatch, tmp_path):
     assert main(["--answerer", "logged", "--raw", str(raw)]) == 0
     assert json.loads(raw.read_text("utf-8"))["q1"]["tool_log"] == log
     assert reports.exists()
+
+
+# ---- #190: --repeat · 회차별 지표 · 실행 간 범위 ----
+
+
+def _tables(text):
+    """리포트의 표를 [(머리 칸, [행 칸...])]로 읽는다. 표는 빈 줄로 갈린다."""
+    out, cur = [], []
+    for ln in text.splitlines() + [""]:
+        if ln.startswith("| "):
+            cur.append([c.strip() for c in ln.strip("| ").split(" | ")])
+        elif cur:
+            out.append((cur[0], cur[2:]))
+            cur = []
+    return out
+
+
+def _metric_table(text):
+    """회차별 지표 표를 {(답하는 쪽, 회차): {열 이름: 값}}로 읽는다."""
+    head, rows = next(t for t in _tables(text) if t[0][:2] == ["답하는 쪽", "회차"])
+    return head, {(r[0], r[1]): dict(zip(head, r, strict=True)) for r in rows}
+
+
+METRIC_COLUMNS = [
+    "정답률", "지어낸 역", "지어낸 소요 시간", "질문당 도구 호출", "질문당 응답 시간(초)",
+    "파싱 실패", "토큰", "도구 호출 상한에 닿은 질문",
+]
+
+
+def _result(qid, correct, *, invented=0, invented_time=0, calls=0, ms=0.0, tokens=0, error=None):
+    route = Route([("A", 1), ("C", 1)], 660, 0)
+    return Result(qid, route, Answer(tool_calls=calls, tokens=tokens, parse_error=error),
+                  Grade(True, correct, invented_stations=invented, invented_time=invented_time),
+                  ms)
+
+
+def test_repeat_must_be_at_least_one():
+    import pytest
+
+    for bad in ("0", "-1", "x"):
+        with pytest.raises(SystemExit):
+            main(["--repeat", bad])
+
+
+def test_repeat_runs_each_answerer_that_many_times_and_splits_raw_by_round(
+    monkeypatch, tmp_path
+):
+    from subway_route_agent.answerers import ANSWERERS
+
+    reports = _fake_answerers(monkeypatch, tmp_path)
+    calls = []
+    monkeypatch.setitem(ANSWERERS, "counted", lambda text: calls.append(text) or Answer(raw="c"))
+    raw = tmp_path / "r" / "raw.json"
+    assert main(["--answerer", "counted", "good", "--repeat", "2", "--raw", str(raw)]) == 0
+    assert len(calls) == 2 * 10
+    for name in ("counted", "good"):
+        for rnd in (1, 2):
+            assert (tmp_path / "r" / f"raw-{name}-{rnd}.json").exists()
+    assert not raw.exists() and not (tmp_path / "r" / "raw-good.json").exists()
+    assert (reports / "compare.md").exists() and (reports / "good.md").exists()
+
+
+def test_repeat_with_one_answerer_still_splits_raw_by_round(monkeypatch, tmp_path):
+    _fake_answerers(monkeypatch, tmp_path)
+    raw = tmp_path / "raw.json"
+    assert main(["--answerer", "good", "--repeat", "2", "--raw", str(raw)]) == 0
+    assert (tmp_path / "raw-good-1.json").exists() and (tmp_path / "raw-good-2.json").exists()
+    assert not raw.exists()
+
+
+def test_single_answerer_report_uses_the_last_round(monkeypatch, tmp_path):
+    from subway_route_agent.answerers import ANSWERERS
+
+    reports = _fake_answerers(monkeypatch, tmp_path)
+    seen = iter(range(100))
+    monkeypatch.setitem(ANSWERERS, "grow", lambda text: Answer(tool_calls=next(seen) // 10))
+    assert main(["--answerer", "grow", "--repeat", "3"]) == 0
+    text = (reports / "grow.md").read_text(encoding="utf-8")
+    assert {c["도구 호출"] for c in _cells(text).values()} == {"2"}  # 회차 3(0부터 2)
+    assert "- 3회 중 마지막 회차 결과다" in text  # 한 회차만 보인다는 것을 리포트가 말한다
+
+
+def test_report_has_no_last_round_note_when_run_once(monkeypatch, tmp_path):
+    reports = _fake_answerers(monkeypatch, tmp_path)
+    assert main(["--answerer", "good"]) == 0
+    assert "마지막 회차" not in (reports / "good.md").read_text(encoding="utf-8")
+
+
+def test_repeat_two_compare_has_per_round_metric_table_and_range_rows(monkeypatch, tmp_path):
+    reports = _fake_answerers(monkeypatch, tmp_path)
+    assert main(["--answerer", "stub", "good", "--repeat", "2"]) == 0
+    text = (reports / "compare.md").read_text(encoding="utf-8")
+    head, rows = _metric_table(text)
+    assert head == ["답하는 쪽", "회차", *METRIC_COLUMNS]
+    assert set(rows) == {("stub", "1"), ("stub", "2"), ("stub", "범위"),
+                         ("good", "1"), ("good", "2"), ("good", "범위")}
+    good1 = rows[("good", "1")]
+    assert good1["정답률"] == "1/10" and good1["질문당 도구 호출"] == "2.0"
+    assert good1["토큰"] == "500" and good1["파싱 실패"] == "0"
+    # 값이 하나로 모이는 쪽은 범위도 한 값이다
+    assert rows[("good", "범위")]["정답률"] == "1/10~1/10"
+    assert rows[("stub", "범위")]["정답률"] == "0/10~0/10"
+    # 열 수가 빈칸 없이 채워져 있다
+    assert all(v for row in rows.values() for v in row.values())
+
+
+def test_repeat_two_question_table_counts_hits_and_tool_calls_per_round(monkeypatch, tmp_path):
+    from subway_route_agent.answerers import ANSWERERS
+
+    reports = _fake_answerers(monkeypatch, tmp_path)
+    rounds = iter([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5])
+    monkeypatch.setitem(ANSWERERS, "varying", lambda text: Answer(
+        path=GOOD_PATH, seconds=1740, tool_calls=next(rounds)))
+    assert main(["--answerer", "good", "varying", "--repeat", "2"]) == 0
+    text = (reports / "compare.md").read_text(encoding="utf-8")
+    head, rows = next(t for t in _tables(text) if t[0][0] == "질문")
+    assert head[:2] == ["질문", "정답 시간"]
+    assert "good 맞은 횟수" in head and "varying 도구 호출" in head
+    q1 = dict(zip(head, next(r for r in rows if r[0] == "q1"), strict=True))
+    assert q1["good 맞은 횟수"] == "2/2" and q1["good 도구 호출"] == "2/2"
+    assert q1["varying 맞은 횟수"] == "2/2" and q1["varying 도구 호출"] == "0/5"
+
+
+def test_render_compare_ranges_and_per_question_averages():
+    g = build_graph([Row(1, "A", 0), Row(1, "B", 60), Row(1, "C", 600)])
+    r1 = [_result("q1", True, calls=2, ms=1000, tokens=10),
+          _result("q2", False, invented=2, invented_time=1, calls=4, ms=3000, tokens=20)]
+    r2 = [_result("q1", True, calls=0, ms=500, tokens=5),
+          _result("q2", True, invented=1, calls=1, ms=500, tokens=5, error="JSON 아님")]
+    text = render_compare("d.csv", {"x": [r1, r2]}, {}, g)
+    _, rows = _metric_table(text)
+    one, two, span = rows[("x", "1")], rows[("x", "2")], rows[("x", "범위")]
+    assert (one["정답률"], one["지어낸 역"], one["지어낸 소요 시간"]) == ("1/2", "2", "1")
+    assert (two["정답률"], two["지어낸 역"], two["지어낸 소요 시간"]) == ("2/2", "1", "0")
+    assert one["질문당 도구 호출"] == "3.0" and two["질문당 도구 호출"] == "0.5"
+    assert one["질문당 응답 시간(초)"] == "2.0" and two["질문당 응답 시간(초)"] == "0.5"
+    assert one["파싱 실패"] == "0" and two["파싱 실패"] == "1"
+    assert one["토큰"] == "30" and two["토큰"] == "10"
+    assert span["정답률"] == "1/2~2/2" and span["지어낸 역"] == "1~2"
+    assert span["지어낸 소요 시간"] == "0~1" and span["질문당 도구 호출"] == "0.5~3.0"
+    assert span["질문당 응답 시간(초)"] == "0.5~2.0" and span["토큰"] == "10~30"
+    assert span["파싱 실패"] == "0~1"
+
+
+def test_render_compare_counts_questions_that_hit_the_tool_call_limit_per_round():
+    from subway_route_agent.answerers import LIMIT_REACHED
+
+    g = build_graph([Row(1, "A", 0), Row(1, "B", 60)])
+    capped = _result("q1", False, calls=25, error=LIMIT_REACHED)
+    ok = _result("q2", True, calls=1)
+    text = render_compare("d.csv", {"x": [[capped, capped], [ok, ok]]}, {}, g)
+    _, rows = _metric_table(text)
+    col = "도구 호출 상한에 닿은 질문"
+    assert [rows[("x", "1")][col], rows[("x", "2")][col], rows[("x", "범위")][col]] == [
+        "2", "0", "0~2"]
+
+
+def test_render_compare_one_round_keeps_current_question_columns_and_has_no_range_rows():
+    g = build_graph([Row(1, "A", 0), Row(1, "B", 60)])
+    text = render_compare("d.csv", {"x": [[_result("q1", True)]]}, {}, g)
+    head = next(t for t in _tables(text) if t[0][0] == "질문")[0]
+    assert head == ["질문", "정답 시간"] + [f"x {c}" for c in COMPARE_COLUMNS]
+    assert "범위" not in text
+
+
+def test_compare_head_names_both_tool_sets_and_coarse_limit_only_when_present():
+    from subway_route_agent.tools import COARSE_TOOLS, FINE_TOOLS
+
+    g = build_graph([Row(1, "A", 0), Row(1, "B", 60)])
+    r = [[_result("q1", True)]]
+    both = render_compare("d.csv", {"llm-tools": r, "llm-tools-coarse": r}, {}, g)
+    fine = ", ".join(t["name"] for t in FINE_TOOLS)
+    coarse = ", ".join(t["name"] for t in COARSE_TOOLS)
+    assert f"- 도구 구성: llm-tools = {fine} / llm-tools-coarse = {coarse}. " \
+           "두 지시문은 도구 안내 한 문장만 다르다" in both
+    assert "- 크게 묶은 도구는 한 호선의 역 목록을 볼 수 없다" in both
+    only_fine = render_compare("d.csv", {"stub": r, "llm-tools": r}, {}, g)
+    assert "역 목록을 볼 수 없다" not in only_fine and "도구 구성:" not in only_fine
+
+
+def test_coarse_report_names_its_tools(monkeypatch, tmp_path):
+    from subway_route_agent.answerers import ANSWERERS, MODEL
+
+    reports = _fake_answerers(monkeypatch, tmp_path)
+    monkeypatch.setenv("OPENAI_API_KEY", "dummy")
+    monkeypatch.setitem(ANSWERERS, "llm-tools-coarse", lambda text: Answer(tool_calls=1))
+    assert main(["--answerer", "llm-tools-coarse"]) == 0
+    text = (reports / "llm-tools-coarse.md").read_text(encoding="utf-8")
+    assert "- 도구: route_seconds (호출 상한 25)" in text
+    assert f"- 답하는 쪽: llm-tools-coarse (모델 {MODEL})" in text
+
+
+def test_coarse_without_key_exits_2(monkeypatch, tmp_path, capsys):
+    _fake_answerers(monkeypatch, tmp_path)
+    assert main(["--answerer", "llm-tools-coarse"]) == 2
+    assert "OPENAI_API_KEY가 없다" in capsys.readouterr().err
+
+
+def test_api_error_in_round_two_keeps_round_one_raw_and_writes_no_report(monkeypatch, tmp_path):
+    import openai
+
+    from subway_route_agent.answerers import ANSWERERS
+
+    reports = _fake_answerers(monkeypatch, tmp_path)
+    seen = []
+
+    def flaky(text):
+        seen.append(text)
+        if len(seen) > 10:
+            raise openai.APIError("연결 실패", request=None, body=None)
+        return Answer(raw="ok")
+
+    monkeypatch.setenv("OPENAI_API_KEY", "dummy")
+    monkeypatch.setitem(ANSWERERS, "llm-tools", flaky)
+    raw = tmp_path / "raw.json"
+    assert main(["--answerer", "llm-tools", "--repeat", "2", "--raw", str(raw)]) == 1
+    assert (tmp_path / "raw-llm-tools-1.json").exists()
+    assert json.loads((tmp_path / "raw-llm-tools-2.json").read_text("utf-8")) == {}
+    assert not reports.exists()
+
+
+def test_render_compare_with_repeat_names_each_model_in_the_head():
+    g = build_graph([Row(1, "A", 0), Row(1, "B", 60)])
+    r = [[_result("q1", True)], [_result("q1", True)]]
+    text = render_compare("d.csv", {"x": r, "stub": r}, {"x": "gpt-test", "stub": None}, g)
+    assert "- x (모델 gpt-test)" in text
+    assert "stub (모델" not in text  # 모델이 없는 답하는 쪽은 줄이 없다
