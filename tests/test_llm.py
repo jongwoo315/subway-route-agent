@@ -103,7 +103,7 @@ def test_registry_has_stub_and_llm_without_building_client(monkeypatch):
         raise AssertionError("OpenAI()가 불렸다")
 
     monkeypatch.setattr(openai, "OpenAI", boom)
-    assert list(ANSWERERS) == ["stub", "llm", "llm-tools"]
+    assert list(ANSWERERS) == ["stub", "llm", "llm-tools", "llm-tools-coarse"]
     assert isinstance(ANSWERERS["stub"]("x"), Answer)
 
 

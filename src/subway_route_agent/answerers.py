@@ -4,7 +4,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from functools import cache
 
-from subway_route_agent.tools import FINE_TOOLS, call_tool
+from subway_route_agent.tools import COARSE_TOOLS, FINE_TOOLS, call_tool
 
 
 @dataclass
@@ -111,16 +111,19 @@ def make_llm(client=None) -> Callable[[str], Answer]:
 TOOL_CALL_LIMIT = 25
 LIMIT_REACHED = f"도구 호출 상한({TOOL_CALL_LIMIT})에 닿았다"  # 리포트가 이 문자열로 센다
 
-# LLM + 도구: 답 형식 설명은 SYSTEM 그대로. 역 목록·정답·질문별 힌트는 넣지 않는다
+# LLM + 도구: 답 형식 설명은 SYSTEM 그대로. 역 목록·정답·질문별 힌트는 넣지 않는다.
+# 두 도구 구성의 지시문은 도구 안내 한 문장만 다르다
+_TOOLS_TAIL = " 환승 시간은 역과 호선마다 다르다. 경로는 직접 고른다."
 TOOLS_SYSTEM = (
-    SYSTEM
-    + " 도구로 역·노선·한 호선 안 소요 시간을 확인할 수 있다."
-    + " 환승 시간은 역과 호선마다 다르다. 경로는 직접 고른다."
+    SYSTEM + " 도구로 역·노선·한 호선 안 소요 시간·환승 시간을 확인할 수 있다." + _TOOLS_TAIL
 )
+COARSE_SYSTEM = SYSTEM + " 도구로 고른 경로의 전체 소요 시간을 확인할 수 있다." + _TOOLS_TAIL
 
 
-def make_llm_tools(client=None) -> Callable[[str], Answer]:
-    """질문 문장과 도구 셋을 LLM에 주고, 도구 호출이 없는 응답이 올 때까지 되풀이하는 답하는 쪽."""
+def make_llm_tools(
+    client=None, tools: list[dict] = FINE_TOOLS, system: str = TOOLS_SYSTEM,
+) -> Callable[[str], Answer]:
+    """질문 문장과 도구 구성을 LLM에 주고, 도구 호출 없는 응답이 올 때까지 되풀이하는 답하는 쪽."""
     if client is None:
         import openai
 
@@ -133,9 +136,9 @@ def make_llm_tools(client=None) -> Callable[[str], Answer]:
         while True:
             resp = client.responses.create(
                 model=MODEL,
-                instructions=TOOLS_SYSTEM,
+                instructions=system,
                 input=items,
-                tools=FINE_TOOLS,
+                tools=tools,
                 text={"format": {"type": "json_schema", "name": "route", "schema": SCHEMA,
                                  "strict": True}},
             )
@@ -153,7 +156,7 @@ def make_llm_tools(client=None) -> Callable[[str], Answer]:
                         tool_log=tool_log,
                     )
                 tool_calls += 1
-                output = call_tool(c.name, c.arguments, FINE_TOOLS)
+                output = call_tool(c.name, c.arguments, tools)
                 tool_log.append({"name": c.name, "arguments": c.arguments, "output": output[:200]})
                 items.append({"type": "function_call_output", "call_id": c.call_id,
                               "output": output})
@@ -183,10 +186,16 @@ def _llm_tools() -> Callable[[str], Answer]:
     return make_llm_tools()
 
 
+@cache
+def _llm_tools_coarse() -> Callable[[str], Answer]:
+    return make_llm_tools(tools=COARSE_TOOLS, system=COARSE_SYSTEM)
+
+
 # 답하는 쪽은 질문 문장만 받는다. 구조화된 필드는 채점만 쓴다.
 # llm은 첫 호출 때 client를 만든다 (import만으로 키가 필요하면 안 된다)
 ANSWERERS: dict[str, Callable[[str], Answer]] = {
     "stub": stub,
     "llm": lambda text: _llm()(text),
     "llm-tools": lambda text: _llm_tools()(text),
+    "llm-tools-coarse": lambda text: _llm_tools_coarse()(text),
 }

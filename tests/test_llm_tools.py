@@ -6,13 +6,14 @@ import pytest
 from subway_route_agent import answerers
 from subway_route_agent.answerers import (
     ANSWERERS,
+    COARSE_SYSTEM,
     SCHEMA,
     TOOL_CALL_LIMIT,
     TOOLS_SYSTEM,
     make_llm_tools,
 )
 from subway_route_agent.data import ROOT
-from subway_route_agent.tools import FINE_TOOLS
+from subway_route_agent.tools import COARSE_TOOLS, FINE_TOOLS
 
 GOOD = json.dumps({
     "path": [{"station": "강남", "line": 2}, {"station": "홍대입구", "line": 2}],
@@ -167,12 +168,54 @@ def test_missing_usage_counts_zero_tokens():
     assert make_llm_tools(FakeClient([resp]))("질문").tokens == 0
 
 
+FINE_GUIDE = " 도구로 역·노선·한 호선 안 소요 시간·환승 시간을 확인할 수 있다."
+COARSE_GUIDE = " 도구로 고른 경로의 전체 소요 시간을 확인할 수 있다."
+
+
 def test_tools_system_says_transfer_time_varies_and_has_no_station_hints():
-    assert "180" not in TOOLS_SYSTEM  # 틀린 값을 주지 않는다
-    assert "환승 시간은 역과 호선마다 다르다." in TOOLS_SYSTEM
-    assert TOOLS_SYSTEM.startswith(answerers.SYSTEM)  # 답 형식 설명은 LLM 혼자와 같다
-    for hint in ["동대문역사문화공원", "서울역", "잠실", "홍대입구", "강남", "마천", "방화"]:
-        assert hint not in TOOLS_SYSTEM
+    for system in (TOOLS_SYSTEM, COARSE_SYSTEM):
+        assert "180" not in system  # 틀린 값을 주지 않는다
+        assert "환승 시간은 역과 호선마다 다르다. 경로는 직접 고른다." in system
+        assert system.startswith(answerers.SYSTEM)  # 답 형식 설명은 LLM 혼자와 같다
+        for hint in ["동대문역사문화공원", "서울역", "잠실", "홍대입구", "강남", "마천", "방화"]:
+            assert hint not in system
+
+
+def test_two_systems_differ_only_in_the_tool_guide_sentence():
+    assert FINE_GUIDE in TOOLS_SYSTEM and COARSE_GUIDE in COARSE_SYSTEM
+    assert TOOLS_SYSTEM != COARSE_SYSTEM
+    assert TOOLS_SYSTEM.replace(FINE_GUIDE, "") == COARSE_SYSTEM.replace(COARSE_GUIDE, "")
+
+
+def test_coarse_answerer_requests_coarse_tools_and_instructions_and_feeds_result_back():
+    first = response([call_item("c1", "route_seconds", {"path": [
+        {"station": "강남", "line": 2}, {"station": "홍대입구", "line": 2}]})])
+    client = FakeClient([first, response(text=GOOD)])
+    ans = ANSWERERS["llm-tools-coarse"]  # 등록돼 있다
+    assert callable(ans)
+    ans = make_llm_tools(client, COARSE_TOOLS, COARSE_SYSTEM)("질문")
+    assert ans.tool_calls == 1 and ans.parse_error is None and ans.seconds == 1740
+    assert [c["tools"] for c in client.calls] == [COARSE_TOOLS, COARSE_TOOLS]
+    assert [c["instructions"] for c in client.calls] == [COARSE_SYSTEM, COARSE_SYSTEM]
+    (out,) = tool_outputs(client.calls[1]["input"])
+    assert json.loads(out["output"]) == {"seconds": 1740, "transfers": 0}
+    assert ans.tool_log[0]["name"] == "route_seconds"
+
+
+def test_coarse_answerer_does_not_run_fine_tools():
+    bad = response([call_item("c1", "find_station", {"name": "강남"})])
+    client = FakeClient([bad, response(text=GOOD)])
+    make_llm_tools(client, COARSE_TOOLS, COARSE_SYSTEM)("질문")
+    (out,) = tool_outputs(client.calls[1]["input"])
+    assert json.loads(out["output"]) == {"error": "모르는 도구: find_station"}
+
+
+def test_fine_answerer_does_not_run_route_seconds():
+    bad = response([call_item("c1", "route_seconds", {"path": []})])
+    client = FakeClient([bad, response(text=GOOD)])
+    make_llm_tools(client)("질문")
+    (out,) = tool_outputs(client.calls[1]["input"])
+    assert json.loads(out["output"]) == {"error": "모르는 도구: route_seconds"}
 
 
 def test_registry_has_llm_tools_without_building_client(monkeypatch):
@@ -182,8 +225,8 @@ def test_registry_has_llm_tools_without_building_client(monkeypatch):
         raise AssertionError("OpenAI()가 불렸다")
 
     monkeypatch.setattr(openai, "OpenAI", boom)
-    assert list(ANSWERERS) == ["stub", "llm", "llm-tools"]
-    assert callable(ANSWERERS["llm-tools"])
+    assert list(ANSWERERS) == ["stub", "llm", "llm-tools", "llm-tools-coarse"]
+    assert callable(ANSWERERS["llm-tools"]) and callable(ANSWERERS["llm-tools-coarse"])
 
 
 # ---- 녹화한 응답 재생 (실제 키로 scripts/record_llm_tools.py가 녹화) ----
