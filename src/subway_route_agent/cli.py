@@ -13,7 +13,7 @@ from subway_route_agent.grade import _minutes, grade
 from subway_route_agent.graph import ALIASES, Graph, build_graph, count_transfers
 from subway_route_agent.report import Result, render, render_compare
 from subway_route_agent.route import Route, shortest
-from subway_route_agent.tools import FINE_TOOLS
+from subway_route_agent.tools import COARSE_TOOLS, FINE_TOOLS
 
 QUESTIONS = ROOT / "data" / "questions.json"
 REPORT_DIR = ROOT / "reports"
@@ -40,18 +40,29 @@ def truth_for(g: Graph, q: dict) -> Route | None:
     return route
 
 
-LLM_ANSWERERS = ("llm", "llm-tools")
+LLM_ANSWERERS = ("llm", "llm-tools", "llm-tools-coarse")
+TOOL_SETS = {"llm-tools": FINE_TOOLS, "llm-tools-coarse": COARSE_TOOLS}
 
 
-def _raw_path(raw: Path, name: str, many: bool) -> Path:
+def _raw_path(raw: Path, name: str, many: bool, rnd: int, repeat: int) -> Path:
+    """답하는 쪽이 둘 이상이면 이름을, 회차가 둘 이상이면 회차(1부터)를 파일명에 붙인다."""
+    if repeat > 1:
+        return raw.with_name(f"{raw.stem}-{name}-{rnd}{raw.suffix}")
     return raw.with_name(f"{raw.stem}-{name}{raw.suffix}") if many else raw
 
 
 def _notes(name: str) -> list[str]:
-    if name != "llm-tools":
+    if name not in TOOL_SETS:
         return []
-    tools = ", ".join(t["name"] for t in FINE_TOOLS)
+    tools = ", ".join(t["name"] for t in TOOL_SETS[name])
     return [f"도구: {tools} (호출 상한 {TOOL_CALL_LIMIT})"]
+
+
+def _repeat(value: str) -> int:
+    n = int(value)
+    if n < 1:
+        raise argparse.ArgumentTypeError("1 이상이어야 한다")
+    return n
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -60,7 +71,10 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--out", type=Path, default=None,
                    help="답하는 쪽이 하나면 그 리포트, 둘 이상이면 비교 리포트 경로")
     p.add_argument("--raw", type=Path, default=None,
-                   help="질문별 LLM 원문을 JSON으로 쓴다. 둘 이상이면 <파일명>-<이름>.json")
+                   help="질문별 LLM 원문을 JSON으로 쓴다. 둘 이상이면 <파일명>-<이름>.json, "
+                        "--repeat이 2 이상이면 <파일명>-<이름>-<회차>.json")
+    p.add_argument("--repeat", type=_repeat, default=1,
+                   help="답하는 쪽마다 질문 셋을 이만큼 되풀이해 돈다(기본 1)")
     args = p.parse_args(argv)
     names = list(dict.fromkeys(args.answerer))  # 같은 이름은 한 번만 돈다
     many = len(names) > 1
@@ -80,30 +94,32 @@ def main(argv: list[str] | None = None) -> int:
     if missing:
         return 2
 
-    by_answerer: dict[str, list[Result]] = {}
+    by_answerer: dict[str, list[list[Result]]] = {}
     for name in names:
         answer = ANSWERERS[name]
-        results = []
-        for q in questions:
-            truth = truth_for(g, q)
-            t0 = time.perf_counter()
-            try:
-                ans = answer(q["text"])  # 답하는 쪽은 문장만 받는다
-            except openai.APIError as e:
-                print(f"API 오류({name} {q['id']}): {e}", file=sys.stderr)
-                if args.raw:  # 이미 받은 답의 원문은 잃지 않는다. 리포트는 쓰지 않는다
-                    _write_raw(_raw_path(args.raw, name, many), results)
-                return 1
-            ms = (time.perf_counter() - t0) * 1000
-            results.append(Result(q["id"], truth, ans, grade(g, q, ans, truth), ms,
-                                  "hand_seconds" in q))
-        if args.raw:
-            _write_raw(_raw_path(args.raw, name, many), results)
-        by_answerer[name] = results
+        by_answerer[name] = []
+        for rnd in range(1, args.repeat + 1):
+            results = []
+            for q in questions:
+                truth = truth_for(g, q)
+                t0 = time.perf_counter()
+                try:
+                    ans = answer(q["text"])  # 답하는 쪽은 문장만 받는다
+                except openai.APIError as e:
+                    print(f"API 오류({name} {q['id']}, {rnd}회차): {e}", file=sys.stderr)
+                    if args.raw:  # 이미 받은 답의 원문은 잃지 않는다. 리포트는 쓰지 않는다
+                        _write_raw(_raw_path(args.raw, name, many, rnd, args.repeat), results)
+                    return 1
+                ms = (time.perf_counter() - t0) * 1000
+                results.append(Result(q["id"], truth, ans, grade(g, q, ans, truth), ms,
+                                      "hand_seconds" in q))
+            if args.raw:
+                _write_raw(_raw_path(args.raw, name, many, rnd, args.repeat), results)
+            by_answerer[name].append(results)
 
     models = {n: MODEL if n in LLM_ANSWERERS else None for n in names}
-    for name, results in by_answerer.items():
-        text = render(name, DATA.name, results, models[name], _notes(name), counts)
+    for name, rounds in by_answerer.items():
+        text = render(name, DATA.name, rounds[-1], models[name], _notes(name), counts)
         out = args.out if args.out and not many else REPORT_DIR / f"{name}.md"
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_text(text, encoding="utf-8")
