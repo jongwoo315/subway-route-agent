@@ -175,7 +175,7 @@ COARSE_KEYS = {"seconds", "transfers", "error", "candidates", "lines"}
 
 
 def _csv_transfer(station, a, b):
-    """환승 CSV에서 (역, 앞 호선 a → 뒤 호선 b) 초를 읽는다. 테스트가 기대값을 직접 읽는다."""
+    """환승 CSV에서 (역, 앞 호선 a → 뒤 호선 b) 초를 읽는다. 테스트가 비교할 값을 직접 읽는다."""
     with open(TRANSFER_DATA, encoding="utf-8", newline="") as f:
         for r in csv.DictReader(f):
             if r["환승역명"].strip() == station and r["호선"] == str(a) \
