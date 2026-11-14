@@ -187,13 +187,19 @@ def test_two_systems_differ_only_in_the_tool_guide_sentence():
     assert TOOLS_SYSTEM.replace(FINE_GUIDE, "") == COARSE_SYSTEM.replace(COARSE_GUIDE, "")
 
 
-def test_coarse_answerer_requests_coarse_tools_and_instructions_and_feeds_result_back():
+def test_coarse_answerer_requests_coarse_tools_and_instructions_and_feeds_result_back(
+        monkeypatch):
+    import openai
+
     first = response([call_item("c1", "route_seconds", {"path": [
         {"station": "강남", "line": 2}, {"station": "홍대입구", "line": 2}]})])
     client = FakeClient([first, response(text=GOOD)])
-    ans = ANSWERERS["llm-tools-coarse"]  # 등록돼 있다
-    assert callable(ans)
-    ans = make_llm_tools(client, COARSE_TOOLS, COARSE_SYSTEM)("질문")
+    monkeypatch.setattr(openai, "OpenAI", lambda: client)
+    answerers._llm_tools_coarse.cache_clear()  # 등록된 답하는 쪽이 첫 호출 때 client를 만든다
+    try:
+        ans = ANSWERERS["llm-tools-coarse"]("질문")
+    finally:
+        answerers._llm_tools_coarse.cache_clear()
     assert ans.tool_calls == 1 and ans.parse_error is None and ans.seconds == 1740
     assert [c["tools"] for c in client.calls] == [COARSE_TOOLS, COARSE_TOOLS]
     assert [c["instructions"] for c in client.calls] == [COARSE_SYSTEM, COARSE_SYSTEM]
