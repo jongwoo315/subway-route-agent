@@ -323,7 +323,8 @@ def test_llm_tools_report_names_model_and_tools(monkeypatch, tmp_path):
     assert main(["--answerer", "llm-tools"]) == 0
     text = (reports / "llm-tools.md").read_text(encoding="utf-8")
     assert f"- 답하는 쪽: llm-tools (모델 {answerers.MODEL})" in text
-    assert "- 도구: find_station, line_stations, travel_seconds (호출 상한 25)" in text
+    assert ("- 도구: find_station, line_stations, travel_seconds, transfer_seconds "
+            "(호출 상한 25)") in text
     assert _cells(text)["q1"]["도구 호출"] == "4"
 
 

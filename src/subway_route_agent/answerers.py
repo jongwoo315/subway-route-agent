@@ -4,7 +4,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from functools import cache
 
-from subway_route_agent.tools import TOOLS, call_tool
+from subway_route_agent.tools import FINE_TOOLS, call_tool
 
 
 @dataclass
@@ -135,7 +135,7 @@ def make_llm_tools(client=None) -> Callable[[str], Answer]:
                 model=MODEL,
                 instructions=TOOLS_SYSTEM,
                 input=items,
-                tools=TOOLS,
+                tools=FINE_TOOLS,
                 text={"format": {"type": "json_schema", "name": "route", "schema": SCHEMA,
                                  "strict": True}},
             )
@@ -153,7 +153,7 @@ def make_llm_tools(client=None) -> Callable[[str], Answer]:
                         tool_log=tool_log,
                     )
                 tool_calls += 1
-                output = call_tool(c.name, c.arguments)
+                output = call_tool(c.name, c.arguments, FINE_TOOLS)
                 tool_log.append({"name": c.name, "arguments": c.arguments, "output": output[:200]})
                 items.append({"type": "function_call_output", "call_id": c.call_id,
                               "output": output})

@@ -13,7 +13,7 @@ from subway_route_agent.grade import _minutes, grade
 from subway_route_agent.graph import ALIASES, Graph, build_graph, count_transfers
 from subway_route_agent.report import Result, render, render_compare
 from subway_route_agent.route import Route, shortest
-from subway_route_agent.tools import TOOLS
+from subway_route_agent.tools import FINE_TOOLS
 
 QUESTIONS = ROOT / "data" / "questions.json"
 REPORT_DIR = ROOT / "reports"
@@ -50,7 +50,7 @@ def _raw_path(raw: Path, name: str, many: bool) -> Path:
 def _notes(name: str) -> list[str]:
     if name != "llm-tools":
         return []
-    tools = ", ".join(t["name"] for t in TOOLS)
+    tools = ", ".join(t["name"] for t in FINE_TOOLS)
     return [f"도구: {tools} (호출 상한 {TOOL_CALL_LIMIT})"]
 
 

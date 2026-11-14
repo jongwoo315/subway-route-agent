@@ -12,7 +12,7 @@ from subway_route_agent.answerers import (
     make_llm_tools,
 )
 from subway_route_agent.data import ROOT
-from subway_route_agent.tools import TOOLS
+from subway_route_agent.tools import FINE_TOOLS
 
 GOOD = json.dumps({
     "path": [{"station": "강남", "line": 2}, {"station": "홍대입구", "line": 2}],
@@ -110,7 +110,7 @@ def test_request_has_tools_instructions_and_same_schema_as_llm_alone():
     assert call["model"] == answerers.MODEL
     assert call["instructions"] == TOOLS_SYSTEM
     assert call["input"] == [{"role": "user", "content": "서울역에서 잠실까지"}]
-    assert call["tools"] == TOOLS
+    assert call["tools"] == FINE_TOOLS
     fmt = call["text"]["format"]
     assert fmt["type"] == "json_schema" and fmt["strict"] is True and fmt["schema"] is SCHEMA
 
@@ -238,5 +238,5 @@ def test_replay_recorded_tool_calls_end_to_end(monkeypatch, tmp_path):
     called = {i.name for r in (to_namespace(r) for rec in fixture.values()
                                for r in rec["responses"]) for i in r.output
               if i.type == "function_call"}
-    assert called <= {t["name"] for t in TOOLS}
+    assert called <= {t["name"] for t in FINE_TOOLS}
     assert json.loads(raw.read_text(encoding="utf-8"))["q10"]["parse_error"] is None
