@@ -62,3 +62,4 @@
 - 테스트: `env -u OPENAI_API_KEY uv run pytest -q` 188 passed, `uv run ruff check .` 통과(fix 커밋 뒤)
 - PR 본문 Pre-PR 3번의 `186 passed`는 리뷰 전 값이다. 지금은 188이다
 - 단어장 검사: `docs/concepts.md` 용어 절이 있어 실행했다
+- 인라인 스레드 게시: 5건 중 1건(7행, `src/subway_route_agent/cli.py:130`)이 그 줄이 diff에 없어 422로 실패해 같은 파일 125줄에 달았다. 나머지 4건은 8·9·10·11행 위치에 달렸다
