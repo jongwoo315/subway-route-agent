@@ -1,3 +1,4 @@
+import statistics
 from dataclasses import dataclass
 from itertools import pairwise
 
@@ -168,6 +169,28 @@ def _metric_rows(name: str, rounds: list[list[Result]]) -> list[str]:
     return ["| " + " | ".join(row) + " |" for row in [*rows, span]]
 
 
+# 평균 차이를 적는 지표: (METRIC_COLUMNS 위치, 줄 이름)
+DIFF_METRICS = [(0, "정답률(맞은 질문 수)"), (3, "질문당 도구 호출"),
+                (4, "질문당 응답 시간(초)"), (6, "토큰")]
+
+
+def _diff_lines(names: list[str], by_answerer: dict[str, list[list[Result]]]) -> list[str]:
+    """답하는 쪽 둘의 회차별 평균 차이 d와 표준오차의 2배 e. 지표마다 한 줄이다."""
+    a, b = names
+    per = {name: [_metrics(rs) for rs in by_answerer[name]] for name in names}
+    lines = [f"- 평균 차이 d = {a} 평균 − {b} 평균, e = 2 × √(s₁²/n₁ + s₂²/n₂)"
+             "(s는 회차별 값의 표준편차, n은 회차 수)"]
+    for c, label in DIFF_METRICS:
+        xs, ys = [v[c] for v in per[a]], [v[c] for v in per[b]]
+        d = statistics.mean(xs) - statistics.mean(ys)
+        e = 2 * (statistics.variance(xs) / len(xs) + statistics.variance(ys) / len(ys)) ** 0.5
+        lines.append(
+            f"- {label}: {a} 평균 {statistics.mean(xs):.2f}(표준편차 {statistics.stdev(xs):.2f}), "
+            f"{b} 평균 {statistics.mean(ys):.2f}(표준편차 {statistics.stdev(ys):.2f}). "
+            f"d = {d:+.2f}, e = {e:.2f}, |d| ≥ e: {'예' if abs(d) >= e else '아니오'}")
+    return lines
+
+
 def render_compare(
     data_name: str,
     by_answerer: dict[str, list[list[Result]]],
@@ -224,6 +247,8 @@ def render_compare(
                   "| " + " | ".join("---" for _ in metric_columns) + " |"]
         for name in names:
             lines += _metric_rows(name, by_answerer[name])
+        if len(names) == 2:
+            lines += ["", *_diff_lines(names, by_answerer)]
         columns = ["질문", "정답 시간"] + [
             f"{name} {c}" for name in names for c in ("맞은 횟수", "도구 호출")]
     lines += ["", "| " + " | ".join(columns) + " |",

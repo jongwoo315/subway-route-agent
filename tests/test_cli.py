@@ -371,6 +371,49 @@ def test_report_shows_no_route_answer_as_answered_and_compare_cell_says_no_route
     assert _cells(text)["q6"]["x 답 경로 소요 시간"] == "길 없음"
 
 
+def _rounds_with_hits(hits, n=10, tool_calls=1, tokens=10, ms=1000.0):
+    """회차마다 질문 n개 중 hits[i]개가 맞은 가짜 결과."""
+    truth = Route([("A", 1), ("B", 1)], 60, 0)
+    return [[Result(f"q{i + 1}", truth, Answer(tool_calls=tool_calls, tokens=tokens),
+                    Grade(True, i < k), ms) for i in range(n)] for k in hits]
+
+
+def test_render_compare_mean_difference_and_double_standard_error_from_rejected_values():
+    g = build_graph([Row(1, "A", 0), Row(1, "B", 60)])
+    by = {"llm-tools": _rounds_with_hits([2, 3, 3, 2, 2]),
+          "llm-tools-coarse": _rounds_with_hits([3, 2, 2, 5, 4])}
+    text = render_compare("d.csv", by, {}, g)
+    line = next(ln for ln in text.splitlines() if ln.startswith("- 정답률(맞은 질문 수):"))
+    assert "llm-tools 평균 2.40(표준편차 0.55)" in line
+    assert "llm-tools-coarse 평균 3.20(표준편차 1.30)" in line
+    assert "d = -0.80" in line and "e = 1.26" in line and line.endswith("|d| ≥ e: 아니오")
+    # 지표마다 한 줄, 회차별 지표 표 아래에 있다
+    labels = ["정답률(맞은 질문 수)", "질문당 도구 호출", "질문당 응답 시간(초)", "토큰"]
+    lines = text.splitlines()
+    idx = [next(i for i, ln in enumerate(lines) if ln.startswith(f"- {lab}:")) for lab in labels]
+    assert idx == sorted(idx)
+    last_range = max(i for i, ln in enumerate(lines) if ln.startswith("| llm-tools-coarse | 범위"))
+    assert idx[0] > last_range
+
+
+def test_render_compare_says_yes_when_difference_exceeds_double_standard_error():
+    g = build_graph([Row(1, "A", 0), Row(1, "B", 60)])
+    by = {"x": _rounds_with_hits([2, 2, 3, 2, 2]), "y": _rounds_with_hits([8, 8, 9, 8, 8])}
+    text = render_compare("d.csv", by, {}, g)
+    line = next(ln for ln in text.splitlines() if ln.startswith("- 정답률(맞은 질문 수):"))
+    assert "d = -6.00" in line and line.endswith("|d| ≥ e: 예")
+
+
+def test_render_compare_has_no_mean_difference_lines_for_one_round_or_not_two_answerers():
+    g = build_graph([Row(1, "A", 0), Row(1, "B", 60)])
+    one = {"x": _rounds_with_hits([2]), "y": _rounds_with_hits([3])}
+    assert "|d| ≥ e" not in render_compare("d.csv", one, {}, g)
+    three = {k: _rounds_with_hits([2, 3]) for k in "xyz"}
+    assert "|d| ≥ e" not in render_compare("d.csv", three, {}, g)
+    two = {k: _rounds_with_hits([2, 3]) for k in "xy"}
+    assert "|d| ≥ e" in render_compare("d.csv", two, {}, g)
+
+
 def test_render_heads_name_stations_that_keep_180_seconds():
     from subway_route_agent.graph import count_transfers
 
