@@ -40,26 +40,57 @@ def test_find_station_unknown_name_lists_candidates_sorted_and_capped():
     assert find_station("홍대")["candidates"] == ["홍대입구"]
 
 
+def _all_segments(res):
+    return [*res["main"], *(s for b in res["branches"] for s in b["segments"])]
+
+
 def test_line_stations_segment_count_and_branches():
     rows2 = [r for r in load_rows() if r.line == 2]
     res = line_stations(2)
-    segs = res["segments"]
+    segs = _all_segments(res)
     assert res["line"] == 2 and len(segs) == len(rows2) - 1
+    assert set(res) == {"line", "main", "branches"}
     assert set(segs[0]) == {"from", "to", "seconds", "one_way"}
     by_to = {s["to"]: s for s in segs}
     assert by_to["용답"]["from"] == "성수"
     assert by_to["도림천"]["from"] == "신도림"
-    assert segs[[s["to"] for s in segs].index("용답") - 1]["to"] == "시청"
-    last_main = next(s for s in segs if s["to"] == "시청" and s["from"] == "충정로")
-    assert last_main["seconds"] == 90
     assert not any(s["one_way"] for s in segs)
 
 
-def test_line_stations_line5_branch_and_line6_one_way_loop():
-    assert {s["to"]: s["from"] for s in line_stations(5)["segments"]}["둔촌동"] == "강동"
-    one_way = {(s["from"], s["to"]) for s in line_stations(6)["segments"] if s["one_way"]}
+def test_line_stations_splits_line2_into_main_and_two_branches():
+    res = line_stations(2)
+    assert [b["from_station"] for b in res["branches"]] == ["성수", "신도림"]
+    main_stations = {s["to"] for s in res["main"]} | {s["from"] for s in res["main"]}
+    assert {"성수", "신도림", "시청"} <= main_stations
+    # 본선에는 지선 역이 없고, 지선 역은 지선에만 있다
+    assert "용답" not in main_stations and "도림천" not in main_stations
+    yongdap = next(b for b in res["branches"] if b["from_station"] == "성수")
+    assert yongdap["segments"][0]["from"] == "성수" and yongdap["segments"][0]["to"] == "용답"
+    assert "시청" not in {s["to"] for s in yongdap["segments"]}
+    last_main = next(s for s in res["main"] if s["to"] == "시청" and s["from"] == "충정로")
+    assert last_main["seconds"] == 90
+
+
+def test_line_stations_line5_splits_gangdong_branch_to_machon():
+    res = line_stations(5)
+    main_stations = {s["to"] for s in res["main"]} | {s["from"] for s in res["main"]}
+    assert {"방화", "강동", "하남검단산"} <= main_stations
+    assert "마천" not in main_stations and "둔촌동" not in main_stations
+    (branch,) = res["branches"]
+    assert branch["from_station"] == "강동"
+    assert branch["segments"][0]["from"] == "강동" and branch["segments"][0]["to"] == "둔촌동"
+    assert branch["segments"][-1]["to"] == "마천"
+    assert "마천" not in {s["to"] for s in res["main"]}
+    # 본선은 CSV 순서 그대로다: 강동 다음 상일동 ... 하남검단산
+    assert res["main"][-1]["to"] == "하남검단산"
+
+
+def test_line_stations_line6_one_way_loop_and_lines_without_branch():
+    one_way = {(s["from"], s["to"]) for s in line_stations(6)["main"] if s["one_way"]}
     assert ("응암", "역촌") in one_way and ("구산", "응암") in one_way
     assert ("역촌", "불광") in one_way
+    for line in (1, 3, 4, 6, 7, 8):
+        assert line_stations(line)["branches"] == []
 
 
 def test_line_stations_rejects_other_lines():
@@ -162,7 +193,7 @@ def test_line_stations_matches_graph_edges_for_every_line():
         expected = {(a[0], b[0], w) for a, edges in g.items() if a[1] == line
                     for b, w in edges if b[1] == line}
         got = set()
-        for s in line_stations(line)["segments"]:
+        for s in _all_segments(line_stations(line)):
             got.add((s["from"], s["to"], s["seconds"]))
             if not s["one_way"]:
                 got.add((s["to"], s["from"], s["seconds"]))
@@ -335,3 +366,9 @@ def test_call_tool_runs_new_tools_by_name():
 def test_call_tool_rejects_malformed_path(path):
     res = json.loads(call_tool("route_seconds", json.dumps({"path": path}), COARSE_TOOLS))
     assert list(res) == ["error"] and "path" in res["error"]
+
+
+def test_line_stations_tool_description_explains_main_and_branches():
+    tool = next(t for t in FINE_TOOLS if t["name"] == "line_stations")
+    assert ("main은 본선, branches는 갈라지는 역에서 시작하는 지선이다. "
+            "지선과 본선은 갈라지는 역에서만 이어진다") in tool["description"]

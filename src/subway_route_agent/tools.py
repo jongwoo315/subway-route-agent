@@ -38,7 +38,9 @@ def find_station(name: str) -> dict:
 def line_stations(line: int) -> dict:
     if line not in LINES:
         return {"error": LINE_ERROR}
-    segments = []
+    main: list[dict] = []
+    branches: list[dict] = []
+    current = main
     prev: Node | None = None
     for r in _rows():
         if r.line != line:
@@ -47,13 +49,14 @@ def line_stations(line: int) -> dict:
         head = BRANCH_HEADS.get((line, r.station))
         if head:
             prev = (head, line)
+            branches.append({"from_station": head, "segments": (current := [])})
         if prev is not None and r.seconds > 0:
-            segments.append({
+            current.append({
                 "from": prev[0], "to": node[0], "seconds": r.seconds,
                 "one_way": node in ONE_WAY or prev in ONE_WAY,
             })
         prev = node
-    return {"line": line, "segments": segments}
+    return {"line": line, "main": main, "branches": branches}
 
 
 def travel_seconds(line: int, from_station: str, to_station: str) -> dict:
@@ -170,7 +173,9 @@ FINE_TOOLS = [
     _tool(
         "line_stations",
         "호선 하나의 구간 목록을 돌려준다. 구간마다 출발 역, 도착 역, 소요 시간(초), "
-        "한 방향으로만 가는 구간인지가 들어 있다.",
+        "한 방향으로만 가는 구간인지가 들어 있다. "
+        "main은 본선, branches는 갈라지는 역에서 시작하는 지선이다. "
+        "지선과 본선은 갈라지는 역에서만 이어진다.",
         {"line": _INT},
     ),
     _tool(
