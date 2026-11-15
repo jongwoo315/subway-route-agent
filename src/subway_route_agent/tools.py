@@ -96,6 +96,13 @@ def transfer_seconds(station: str, from_line: int, to_line: int) -> dict:
     return {"error": f"{station}에서 {from_line}호선과 {to_line}호선을 갈아탈 수 없다"}
 
 
+def _join_error(i: int, a: Node, b: Node) -> str:
+    if a[1] != b[1]:
+        return (f"{i}번째 {a[0]}({a[1]}호선)과 {i + 1}번째 {b[0]}({b[1]}호선)을 이을 수 없다. "
+                "호선이 바뀌는 곳에는 갈아타는 역을 두 번 쓴다")
+    return f"{i}번째 {a[0]}과 {i + 1}번째 {b[0]}은 {a[1]}호선에서 이 방향으로 이어지지 않는다"
+
+
 def route_seconds(path: list[dict]) -> dict:
     """고른 경로 [{station, line}]의 전체 소요 시간(환승 포함)과 환승 수. 경로는 돌려주지 않는다."""
     # grade → answerers → tools 순환을 피하려고 여기서 import한다
@@ -115,7 +122,7 @@ def route_seconds(path: list[dict]) -> dict:
         nodes.append((found["station"], line))
     for i, pair in enumerate(pairwise(nodes), start=1):
         if fill_path(g, list(pair)) is None:
-            return {"error": f"{i}번째와 {i + 1}번째를 이을 수 없다"}
+            return {"error": _join_error(i, *pair)}
     filled = fill_path(g, nodes)
     seconds = path_seconds(g, filled[0]) if filled else None
     if filled is None or seconds is None:
@@ -185,8 +192,10 @@ COARSE_TOOLS = [
     _tool(
         "route_seconds",
         "고른 경로(역과 호선의 순서)의 전체 소요 시간(초, 환승 포함)과 환승 횟수를 돌려준다. "
-        "중간 역은 빼도 된다. 데이터에 없는 역이면 이름이 비슷한 역 후보를, 그 호선에 없는 "
-        "역이면 그 역이 지나는 호선을, 이을 수 없으면 몇 번째 역 사이인지를 돌려준다.",
+        "갈아타는 역은 내리는 호선으로 한 번, 타는 호선으로 한 번 쓴다. "
+        "같은 호선 안의 중간 역만 뺄 수 있다. 데이터에 없는 역이면 이름이 비슷한 역 후보를, "
+        "그 호선에 없는 역이면 그 역이 지나는 호선을, "
+        "이을 수 없으면 몇 번째 역 사이인지를 돌려준다.",
         {"path": _PATH},
     ),
 ]

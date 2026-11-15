@@ -247,13 +247,39 @@ def test_route_seconds_station_on_wrong_line_returns_lines():
     assert res == {"error": "강남은 3호선에 없다", "lines": [2]}
 
 
+TRANSFER_HINT = "호선이 바뀌는 곳에는 갈아타는 역을 두 번 쓴다"
+
+
 def test_route_seconds_names_which_pair_cannot_be_joined():
     res = route_seconds([{"station": "서울역", "line": 1}, {"station": "잠실", "line": 8}])
-    assert res == {"error": "1번째와 2번째를 이을 수 없다"}
+    assert res == {"error": f"1번째 서울역(1호선)과 2번째 잠실(8호선)을 이을 수 없다. "
+                            f"{TRANSFER_HINT}"}
     res = route_seconds([{"station": "서울역", "line": 1}, {"station": "시청", "line": 1},
                          {"station": "잠실", "line": 8}])
-    assert res == {"error": "2번째와 3번째를 이을 수 없다"}
+    assert res == {"error": f"2번째 시청(1호선)과 3번째 잠실(8호선)을 이을 수 없다. "
+                            f"{TRANSFER_HINT}"}
     assert "error" in route_seconds([])
+
+
+def test_route_seconds_error_for_skipped_transfer_station_names_both_stations_and_lines():
+    # 강남(2) → 고속터미널(3): 갈아타는 교대를 빼고 바로 이은 경로
+    res = route_seconds([{"station": "강남", "line": 2}, {"station": "고속터미널", "line": 3}])
+    assert res == {"error": f"1번째 강남(2호선)과 2번째 고속터미널(3호선)을 이을 수 없다. "
+                            f"{TRANSFER_HINT}"}
+    assert set(res) <= COARSE_KEYS
+
+
+def test_route_seconds_error_for_same_line_pair_that_cannot_be_joined():
+    # 같은 노드를 연달아 쓰면 같은 호선이어도 이을 수 없다
+    res = route_seconds([{"station": "강남", "line": 2}, {"station": "강남", "line": 2}])
+    assert res == {"error": "1번째 강남과 2번째 강남은 2호선에서 이 방향으로 이어지지 않는다"}
+    assert set(res) <= COARSE_KEYS
+
+
+def test_route_seconds_tool_description_explains_transfer_station_rule():
+    (tool,) = COARSE_TOOLS
+    assert ("갈아타는 역은 내리는 호선으로 한 번, 타는 호선으로 한 번 쓴다. "
+            "같은 호선 안의 중간 역만 뺄 수 있다") in tool["description"]
 
 
 def test_route_seconds_output_keys_are_fixed_and_never_contain_a_route():
