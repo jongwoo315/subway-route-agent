@@ -289,3 +289,12 @@ def test_replay_recorded_tool_calls_end_to_end(monkeypatch, tmp_path):
               if i.type == "function_call"}
     assert called <= {t["name"] for t in FINE_TOOLS}
     assert json.loads(raw.read_text(encoding="utf-8"))["q10"]["parse_error"] is None
+
+
+def test_tools_answerer_accepts_no_route_and_both_system_prompts_explain_it():
+    raw = json.dumps({"path": [], "seconds": None, "no_route": True})
+    for tools, system in ((FINE_TOOLS, TOOLS_SYSTEM), (COARSE_TOOLS, COARSE_SYSTEM)):
+        assert "no_route를 true로, path를 빈 목록으로 쓴다" in system
+        ans = make_llm_tools(FakeClient([response([SimpleNamespace(type="message")], text=raw)]),
+                             tools, system)("질문")
+        assert ans.no_route is True and ans.path == [] and ans.parse_error is None

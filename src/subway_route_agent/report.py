@@ -123,6 +123,8 @@ METRIC_COLUMNS = [
 
 
 def _path_cell(g: Graph, r: Result) -> str:
+    if r.answer.no_route:
+        return "길 없음"
     if not r.answer.path:
         return "답 없음"
     given = [tuple(n) for n in r.answer.path]

@@ -363,6 +363,14 @@ def test_render_compare_unit_head_and_rows():
         "11분 0초", "O", "0", "11분 0초", "11분 0초", "X", "0", "답 없음", "없음"]
 
 
+def test_report_shows_no_route_answer_as_answered_and_compare_cell_says_no_route():
+    g = build_graph([Row(1, "A", 0), Row(1, "B", 60)])
+    r = Result("q6", None, Answer(no_route=True), Grade(True, True), 1.0)
+    assert _cells(render("t", "d.csv", [r]))["q6"]["답 있음"] == "O"
+    text = render_compare("d.csv", {"x": [[r]]}, {}, g)
+    assert _cells(text)["q6"]["x 답 경로 소요 시간"] == "길 없음"
+
+
 def test_render_heads_name_stations_that_keep_180_seconds():
     from subway_route_agent.graph import count_transfers
 

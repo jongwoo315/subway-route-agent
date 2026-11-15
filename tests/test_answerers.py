@@ -20,3 +20,7 @@ def test_questions_file_has_ten_questions_with_fields():
     assert [q["id"] for q in qs] == [f"q{i}" for i in range(1, 11)]
     for q in qs:
         assert {"text", "origin", "dest", "max_transfers", "depart", "arrive_by"} <= q.keys()
+
+
+def test_answer_no_route_defaults_to_false():
+    assert Answer().no_route is False

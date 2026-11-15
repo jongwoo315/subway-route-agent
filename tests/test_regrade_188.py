@@ -21,7 +21,7 @@ def _answers(name: str) -> dict[str, Answer]:
     out = {}
     for qid, rec in json.loads((FIXTURES / name).read_text(encoding="utf-8")).items():
         try:
-            path, seconds = _parse(rec["raw"] or "")
+            path, seconds, _ = _parse(rec["raw"] or "")
         except ValueError:
             path, seconds = [], None  # 실패·빈 경로는 답 없음
         out[qid] = Answer(path=path, seconds=seconds)

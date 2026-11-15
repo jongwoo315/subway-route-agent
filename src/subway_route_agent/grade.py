@@ -85,6 +85,8 @@ def _minutes(hhmm: str) -> int:
 
 
 def grade(g: Graph, q: dict, ans: Answer, truth: Route | None) -> Grade:
+    if ans.no_route:  # 길이 없다고 답했다. 정답 없음 질문이면 맞고, 아니면 틀리다
+        return Grade(answered=True, correct=truth is None)
     if not ans.path:
         return Grade(answered=False, correct=False)
     stations = {n[0] for n in g}
