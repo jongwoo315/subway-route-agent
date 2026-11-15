@@ -4,12 +4,12 @@
   "meta": {
     "title": "subway-route-agent 전체 흐름",
     "locale": "ko",
-    "quality_profile": "showcase",
+    "quality_profile": "standard",
     "output": "flow.html",
     "repository": {
       "url": "https://github.com/jongwoo315/subway-route-agent",
       "provider": "github",
-      "revision": "5b437df7e00b708229af075269284f1639a75f32"
+      "revision": "b8014ff3fadb8be971deceab71a21c86f26d1aa5"
     }
   },
   "lanes": [
@@ -64,8 +64,8 @@
       "col": 1,
       "type": "database",
       "label": "questions.json",
-      "sublabel": "[바뀜] 5개 직접 계산한 값",
-      "tag": "조건 바뀜",
+      "sublabel": "질문 10개",
+      "tag": "그대로",
       "sources": [
         {
           "path": "data/questions.json",
@@ -79,8 +79,8 @@
       "col": 1,
       "type": "backend",
       "label": "build_graph",
-      "sublabel": "[바뀜] 환승 = 데이터 값",
-      "tag": "조건 바뀜",
+      "sublabel": "환승 = 데이터 값",
+      "tag": "그대로",
       "sources": [
         {
           "path": "src/subway_route_agent/graph.py",
@@ -151,23 +151,18 @@
       "col": 4,
       "type": "backend",
       "label": "리포트",
-      "sublabel": "[바뀜] 환승역 수 줄",
-      "tag": "조건 바뀜",
+      "sublabel": "답하는 쪽 하나일 때",
+      "tag": "그대로",
       "sources": [
         {
           "path": "src/subway_route_agent/report.py",
-          "line": 65,
+          "line": 66,
           "label": "render"
         },
         {
           "path": "src/subway_route_agent/report.py",
-          "line": 44,
+          "line": 45,
           "label": "transfer_head"
-        },
-        {
-          "path": "src/subway_route_agent/graph.py",
-          "line": 70,
-          "label": "count_transfers"
         }
       ]
     },
@@ -207,8 +202,8 @@
       "col": 3,
       "type": "database",
       "label": "직접 계산하는 테스트",
-      "sublabel": "[바뀜] 환승 CSV도 더한다",
-      "tag": "조건 바뀜",
+      "sublabel": "환승 CSV도 더한다",
+      "tag": "그대로",
       "sources": [
         {
           "path": "tests/test_route.py",
@@ -222,14 +217,19 @@
       "lane": "answer",
       "col": 4,
       "type": "frontend",
-      "label": "llm-tools — LLM + 도구",
-      "sublabel": "[바뀜] 180초 문장 삭제",
+      "label": "llm-tools — 잘게 나눈 도구",
+      "sublabel": "[바뀜] 도구 4개를 받는다",
       "tag": "조건 바뀜",
       "sources": [
         {
           "path": "src/subway_route_agent/answerers.py",
-          "line": 115,
+          "line": 117,
           "label": "TOOLS_SYSTEM"
+        },
+        {
+          "path": "src/subway_route_agent/answerers.py",
+          "line": 123,
+          "label": "make_llm_tools"
         }
       ]
     },
@@ -238,17 +238,19 @@
       "lane": "tool",
       "col": 4,
       "type": "backend",
-      "label": "도구 셋 3개",
-      "sublabel": "역·호선 구간·한 호선 안 시간",
-      "tag": "그대로",
+      "label": "잘게 나눈 도구 4개",
+      "sublabel": "[바뀜] + 환승 시간 도구",
+      "tag": "조건 바뀜",
       "sources": [
         {
           "path": "src/subway_route_agent/tools.py",
-          "line": 28
+          "line": 156,
+          "label": "FINE_TOOLS"
         },
         {
           "path": "src/subway_route_agent/tools.py",
-          "line": 58
+          "line": 85,
+          "label": "transfer_seconds"
         }
       ]
     },
@@ -258,13 +260,18 @@
       "col": 5,
       "type": "security",
       "label": "비교 리포트",
-      "sublabel": "[바뀜] 환승역 수 줄",
+      "sublabel": "[바뀜] 회차별 지표·범위",
       "tag": "조건 바뀜",
       "sources": [
         {
           "path": "src/subway_route_agent/report.py",
-          "line": 126,
+          "line": 169,
           "label": "render_compare"
+        },
+        {
+          "path": "src/subway_route_agent/cli.py",
+          "line": 76,
+          "label": "--repeat"
         }
       ]
     },
@@ -274,13 +281,54 @@
       "col": 0,
       "type": "database",
       "label": "환승역 CSV",
-      "sublabel": "[새로] 환승 시간 데이터",
-      "tag": "새로 생김",
+      "sublabel": "환승 시간 데이터",
+      "tag": "그대로",
       "sources": [
         {
           "path": "src/subway_route_agent/data.py",
           "line": 31,
           "label": "load_transfers"
+        }
+      ]
+    },
+    {
+      "id": "llmc",
+      "lane": "answer",
+      "col": 5,
+      "type": "frontend",
+      "label": "llm-tools-coarse",
+      "sublabel": "[새로] 크게 묶은 도구",
+      "tag": "새로 생김",
+      "sources": [
+        {
+          "path": "src/subway_route_agent/answerers.py",
+          "line": 120,
+          "label": "COARSE_SYSTEM"
+        },
+        {
+          "path": "src/subway_route_agent/answerers.py",
+          "line": 200
+        }
+      ]
+    },
+    {
+      "id": "rsec",
+      "lane": "tool",
+      "col": 5,
+      "type": "backend",
+      "label": "route_seconds 1개",
+      "sublabel": "[새로] 경로 → 전체 소요 시간",
+      "tag": "새로 생김",
+      "sources": [
+        {
+          "path": "src/subway_route_agent/tools.py",
+          "line": 99,
+          "label": "route_seconds"
+        },
+        {
+          "path": "src/subway_route_agent/tools.py",
+          "line": 184,
+          "label": "COARSE_TOOLS"
         }
       ]
     }
@@ -352,7 +400,7 @@
       "id": "h1",
       "from": "check",
       "to": "llmt",
-      "label": "문장만 (--answerer llm-tools)"
+      "label": "문장만"
     },
     {
       "id": "h2",
@@ -370,13 +418,31 @@
       "id": "h5",
       "from": "report",
       "to": "compare",
-      "label": "둘 이상이면"
+      "label": "둘 이상 · 회차마다"
     },
     {
       "id": "i1",
       "from": "tcsv",
       "to": "graph",
       "label": "환승 시간"
+    },
+    {
+      "id": "j1",
+      "from": "check",
+      "to": "llmc",
+      "label": "문장만"
+    },
+    {
+      "id": "j2",
+      "from": "llmc",
+      "to": "rsec",
+      "label": "경로 ↔ 소요 시간"
+    },
+    {
+      "id": "j3",
+      "from": "llmc",
+      "to": "grade",
+      "label": "답"
     }
   ],
   "cards": [
@@ -384,9 +450,9 @@
       "dot": "cyan",
       "title": "읽는 법",
       "items": [
-        "[새로]·[바뀜]은 PR #5 대비 이번 PR #6이 바꾼 단계다",
-        "직접 계산하는 테스트는 실행 흐름이 아니라 테스트에서만 돈다",
-        "180초는 환승역 데이터에 양쪽 값이 다 없는 방향에만 쓴다. 지금 0개다"
+        "[새로]·[바뀜]은 PR #6 대비 이번 PR #7이 바꾼 단계다",
+        "--repeat N이면 답하는 쪽마다 질문 10개를 N번 돌려 비교 리포트에 회차별 지표와 범위를 적는다",
+        "route_seconds는 채점과 같은 방법으로 답 경로의 시간을 잰다. 경로는 돌려주지 않는다"
       ]
     }
   ]
