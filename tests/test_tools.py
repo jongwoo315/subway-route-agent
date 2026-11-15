@@ -301,10 +301,12 @@ def test_route_seconds_error_for_skipped_transfer_station_names_both_stations_an
 
 
 def test_route_seconds_error_when_same_node_is_written_twice_in_a_row():
-    # 같은 호선 오류 문구에 닿는 입력은 이것뿐이다. 실제 데이터에서 같은 호선 두 역은 늘 이어진다
+    # 같은 호선 두 역이 안 이어지는 입력은 이것뿐이다. 실제 데이터에서 같은 호선 두 역은 늘 이어진다
     # (6호선 역촌→응암처럼 한 방향 구간을 거꾸로 써도 순환선을 돌아 이어진다)
+    # 그래서 원인을 방향이 아니라 중복으로 말한다
     res = route_seconds([{"station": "강남", "line": 2}, {"station": "강남", "line": 2}])
-    assert res == {"error": "1번째 강남과 2번째 강남은 2호선에서 이 방향으로 이어지지 않는다"}
+    assert res == {"error": "1번째와 2번째가 같은 역이다(강남 2호선). "
+                            "같은 역을 같은 호선으로 연달아 두 번 쓰지 않는다"}
     assert set(res) <= COARSE_KEYS
 
 
