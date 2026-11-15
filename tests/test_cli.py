@@ -476,6 +476,15 @@ def test_compare_head_counts_correct_answers_without_filling():
     assert _cells(text)["q2"]["x 채운 역"] == "2"
 
 
+def test_compare_head_does_not_count_no_route_answer_as_correct_without_filling():
+    # 길 없음으로 맞힌 답은 경로가 없어 채울 것도 없다. 섞이면 이 숫자가 부푼다
+    g = build_graph([Row(1, "A", 0), Row(1, "B", 60)])
+    r = Result("q6", None, Answer(no_route=True), Grade(True, True, filled=0), 1.0)
+    text = render_compare("d.csv", {"x": [[r]]}, {}, g)
+    line = next(ln for ln in text.splitlines() if ln.startswith("- x:"))
+    assert "정답률 1/1" in line and "채우지 않고도 맞은 질문 0/1" in line
+
+
 def test_raw_file_has_tool_log(monkeypatch, tmp_path):
     from subway_route_agent.answerers import ANSWERERS
 

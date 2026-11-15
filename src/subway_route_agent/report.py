@@ -225,7 +225,8 @@ def render_compare(
             rs = by_answerer[name][0]
             said = sum(r.truth is not None and r.answer.seconds == r.truth.seconds for r in rs)
             capped = sum(r.answer.parse_error == LIMIT_REACHED for r in rs)
-            unfilled = sum(r.grade.correct and r.grade.filled == 0 for r in rs)
+            unfilled = sum(r.grade.correct and not r.answer.no_route and r.grade.filled == 0
+                           for r in rs)
             who = f"{name} (모델 {models[name]})" if models.get(name) else name
             lines.append(
                 f"- {who}: 정답률 {sum(r.grade.correct for r in rs)}/{n}, "
