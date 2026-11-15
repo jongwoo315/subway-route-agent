@@ -9,7 +9,7 @@
     "repository": {
       "url": "https://github.com/jongwoo315/subway-route-agent",
       "provider": "github",
-      "revision": "b8014ff3fadb8be971deceab71a21c86f26d1aa5"
+      "revision": "9690d77c54e6ffbf333e3de1feeef24c0e619204"
     }
   },
   "lanes": [
@@ -131,8 +131,8 @@
       "col": 3,
       "type": "security",
       "label": "grade",
-      "sublabel": "빠진 역을 채운 뒤 판정",
-      "tag": "그대로",
+      "sublabel": "[바뀜] 「길 없음」 답은 정답 없음 질문에서 맞음",
+      "tag": "조건 바뀜",
       "sources": [
         {
           "path": "src/subway_route_agent/grade.py",
@@ -156,13 +156,8 @@
       "sources": [
         {
           "path": "src/subway_route_agent/report.py",
-          "line": 66,
+          "line": 67,
           "label": "render"
-        },
-        {
-          "path": "src/subway_route_agent/report.py",
-          "line": 45,
-          "label": "transfer_head"
         }
       ]
     },
@@ -172,12 +167,18 @@
       "col": 3,
       "type": "frontend",
       "label": "llm — LLM 혼자",
-      "sublabel": "문장만 OpenAI에 묻고 JSON을 읽는다",
-      "tag": "그대로",
+      "sublabel": "[바뀜] 「길 없음」으로도 답할 수 있다",
+      "tag": "조건 바뀜",
       "sources": [
         {
           "path": "src/subway_route_agent/answerers.py",
-          "line": 81
+          "line": 93,
+          "label": "make_llm"
+        },
+        {
+          "path": "src/subway_route_agent/answerers.py",
+          "line": 43,
+          "label": "SCHEMA"
         }
       ]
     },
@@ -223,12 +224,12 @@
       "sources": [
         {
           "path": "src/subway_route_agent/answerers.py",
-          "line": 117,
+          "line": 129,
           "label": "TOOLS_SYSTEM"
         },
         {
           "path": "src/subway_route_agent/answerers.py",
-          "line": 123,
+          "line": 135,
           "label": "make_llm_tools"
         }
       ]
@@ -239,18 +240,23 @@
       "col": 4,
       "type": "backend",
       "label": "잘게 나눈 도구 4개",
-      "sublabel": "[바뀜] + 환승 시간 도구",
+      "sublabel": "[바뀜] + 환승 시간 도구 · 본선·지선 나눔",
       "tag": "조건 바뀜",
       "sources": [
         {
           "path": "src/subway_route_agent/tools.py",
-          "line": 156,
+          "line": 169,
           "label": "FINE_TOOLS"
         },
         {
           "path": "src/subway_route_agent/tools.py",
-          "line": 85,
+          "line": 88,
           "label": "transfer_seconds"
+        },
+        {
+          "path": "src/subway_route_agent/tools.py",
+          "line": 38,
+          "label": "line_stations"
         }
       ]
     },
@@ -260,18 +266,18 @@
       "col": 5,
       "type": "security",
       "label": "비교 리포트",
-      "sublabel": "[바뀜] 회차별 지표·범위",
+      "sublabel": "[바뀜] 회차별 지표·평균 차이",
       "tag": "조건 바뀜",
       "sources": [
         {
           "path": "src/subway_route_agent/report.py",
-          "line": 169,
+          "line": 194,
           "label": "render_compare"
         },
         {
-          "path": "src/subway_route_agent/cli.py",
-          "line": 76,
-          "label": "--repeat"
+          "path": "src/subway_route_agent/report.py",
+          "line": 177,
+          "label": "_diff_lines"
         }
       ]
     },
@@ -302,12 +308,12 @@
       "sources": [
         {
           "path": "src/subway_route_agent/answerers.py",
-          "line": 120,
+          "line": 132,
           "label": "COARSE_SYSTEM"
         },
         {
           "path": "src/subway_route_agent/answerers.py",
-          "line": 200
+          "line": 212
         }
       ]
     },
@@ -317,17 +323,17 @@
       "col": 5,
       "type": "backend",
       "label": "route_seconds 1개",
-      "sublabel": "[새로] 경로 → 전체 소요 시간",
+      "sublabel": "[새로] 경로 → 전체 소요 시간 또는 오류",
       "tag": "새로 생김",
       "sources": [
         {
           "path": "src/subway_route_agent/tools.py",
-          "line": 99,
+          "line": 112,
           "label": "route_seconds"
         },
         {
           "path": "src/subway_route_agent/tools.py",
-          "line": 184,
+          "line": 199,
           "label": "COARSE_TOOLS"
         }
       ]
@@ -450,8 +456,8 @@
       "dot": "cyan",
       "title": "읽는 법",
       "items": [
-        "[새로]·[바뀜]은 PR #6 대비 이번 PR #7이 바꾼 단계다",
-        "--repeat N이면 답하는 쪽마다 질문 10개를 N번 돌려 비교 리포트에 회차별 지표와 범위를 적는다",
+        "[새로]·[바뀜]은 PR #6(main) 대비 PR #7이 바꾼 단계다. 반려 뒤 재작업분도 같이 들어 있다",
+        "재작업이 바꾼 곳: 노선 조회(본선·지선), route_seconds 설명·오류, 「길 없음」 답과 채점, 비교 리포트 평균 차이",
         "route_seconds는 채점과 같은 방법으로 답 경로의 시간을 잰다. 경로는 돌려주지 않는다"
       ]
     }
