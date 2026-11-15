@@ -95,3 +95,4 @@
 - 단어장 검사: `docs/concepts.md` 용어 절이 있어 두 번 실행했다. 재작업 diff에서는 40행(「표준편차」)만 걸렸고 통계량 이름이라 기록만으로 뒀다. 「손 계산」은 새 줄에 없다
 - 첫 `plan 대조` 표의 「이번에 안 하는 것」 행은 첫 리뷰 시점 값이다. 재작업 Task 7이 `grade.py`·`answerers.py`의 `SYSTEM`·`SCHEMA`·`_parse`를 plan 범위만큼 바꿨다
 - 인라인 스레드 게시: 5건 중 1건(7행, `src/subway_route_agent/cli.py:130`)이 그 줄이 diff에 없어 422로 실패해 같은 파일 125줄에 달았다. 나머지 4건은 8·9·10·11행 위치에 달렸다
+- 재작업 리뷰 인라인 스레드 게시: 2건(35행 `src/subway_route_agent/tools.py:204`, 36행 `src/subway_route_agent/report.py:120`) 모두 달렸다. 실패 0건. 요약 코멘트 1건도 올렸다
