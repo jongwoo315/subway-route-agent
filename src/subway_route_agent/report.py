@@ -187,7 +187,7 @@ def _diff_lines(names: list[str], by_answerer: dict[str, list[list[Result]]]) ->
         lines.append(
             f"- {label}: {a} 평균 {statistics.mean(xs):.2f}(표준편차 {statistics.stdev(xs):.2f}), "
             f"{b} 평균 {statistics.mean(ys):.2f}(표준편차 {statistics.stdev(ys):.2f}). "
-            f"d = {d:+.2f}, e = {e:.2f}, |d| ≥ e: {'예' if abs(d) >= e else '아니오'}")
+            f"d = {d:+.2f}, e = {e:.2f}, |d| ≥ e: {'예' if d != 0 and abs(d) >= e else '아니오'}")
     return lines
 
 

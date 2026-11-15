@@ -404,6 +404,15 @@ def test_render_compare_says_yes_when_difference_exceeds_double_standard_error()
     assert "d = -6.00" in line and line.endswith("|d| ≥ e: 예")
 
 
+def test_render_compare_says_no_when_both_answerers_have_identical_rounds():
+    # d = 0, e = 0이면 0 ≥ 0이 참이 되어 차이가 없는데 「예」가 나왔다
+    g = build_graph([Row(1, "A", 0), Row(1, "B", 60)])
+    by = {"x": _rounds_with_hits([3, 3, 3]), "y": _rounds_with_hits([3, 3, 3])}
+    text = render_compare("d.csv", by, {}, g)
+    line = next(ln for ln in text.splitlines() if ln.startswith("- 정답률(맞은 질문 수):"))
+    assert "d = +0.00, e = 0.00" in line and line.endswith("|d| ≥ e: 아니오")
+
+
 def test_render_compare_has_no_mean_difference_lines_for_one_round_or_not_two_answerers():
     g = build_graph([Row(1, "A", 0), Row(1, "B", 60)])
     one = {"x": _rounds_with_hits([2]), "y": _rounds_with_hits([3])}
