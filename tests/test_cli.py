@@ -404,6 +404,27 @@ def test_render_compare_says_yes_when_difference_exceeds_double_standard_error()
     assert "d = -6.00" in line and line.endswith("|d| ≥ e: 예")
 
 
+def test_render_compare_mean_difference_lines_read_each_metric_from_its_own_column():
+    # 정답률 말고 세 줄도 열 위치가 맞는지 보려고 회차마다 값을 다르게 넣는다
+    g = build_graph([Row(1, "A", 0), Row(1, "B", 60)])
+    truth = Route([("A", 1), ("B", 1)], 60, 0)
+
+    def rounds(per_round):  # (질문당 도구 호출, 질문당 토큰, 질문당 ms) 회차마다, 질문 2개
+        return [[Result(f"q{i}", truth, Answer(tool_calls=c, tokens=t), Grade(True, True), ms)
+                 for i in (1, 2)] for c, t, ms in per_round]
+
+    by = {"x": rounds([(1, 10, 1000.0), (2, 20, 2000.0), (3, 30, 3000.0)]),
+          "y": rounds([(1, 10, 1000.0)] * 3)}
+    text = render_compare("d.csv", by, {}, g)
+    lines = {ln.split(":")[0]: ln for ln in text.splitlines() if ln.startswith("- 질문당")
+             or ln.startswith("- 토큰")}
+    assert "d = +1.00, e = 1.15, |d| ≥ e: 아니오" in lines["- 질문당 도구 호출"]
+    assert "x 평균 2.00(표준편차 1.00)" in lines["- 질문당 도구 호출"]
+    assert "d = +1.00, e = 1.15, |d| ≥ e: 아니오" in lines["- 질문당 응답 시간(초)"]
+    assert "x 평균 40.00(표준편차 20.00)" in lines["- 토큰"]
+    assert "d = +20.00, e = 23.09, |d| ≥ e: 아니오" in lines["- 토큰"]
+
+
 def test_render_compare_says_no_when_both_answerers_have_identical_rounds():
     # d = 0, e = 0이면 0 ≥ 0이 참이 되어 차이가 없는데 「예」가 나왔다
     g = build_graph([Row(1, "A", 0), Row(1, "B", 60)])
