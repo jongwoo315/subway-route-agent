@@ -1,4 +1,7 @@
-"""LLM에게 주는 도구 구성 둘. 잘게 나눈 쪽은 정보만, 크게 묶은 쪽은 고른 경로의 시간만 준다."""
+"""LLM에게 주는 도구 구성 셋. 잘게 나눈 쪽은 정보만, 크게 묶은 쪽은 고른 경로의 시간만 준다.
+
+경로 탐색 쪽은 가장 빠른 경로를 준다.
+"""
 
 import heapq
 import json
@@ -7,6 +10,7 @@ from itertools import pairwise
 
 from subway_route_agent.data import load_rows
 from subway_route_agent.graph import ALIASES, BRANCH_HEADS, ONE_WAY, Graph, Node, build_graph
+from subway_route_agent.route import shortest
 
 LINES = range(1, 9)
 LINE_ERROR = "1~8호선만 있다"
@@ -136,6 +140,19 @@ def route_seconds(path: list[dict]) -> dict:
     return {"seconds": seconds, "transfers": sum(a[1] != b[1] for a, b in pairwise(filled[0]))}
 
 
+def shortest_route(origin: str, dest: str, max_transfers: int | None) -> dict:
+    """두 역 사이의 가장 빠른 경로. 정답과 같은 route.shortest를 부른다."""
+    for station in (origin, dest):
+        found = find_station(station)
+        if not found["found"]:
+            return {"error": f"{station}은 데이터에 없다", "candidates": found["candidates"]}
+    route = shortest(_graph(), _name(origin), _name(dest), max_transfers)
+    if route is None:
+        return {"no_route": True}
+    return {"path": [{"station": n[0], "line": n[1]} for n in route.nodes],
+            "seconds": route.seconds, "transfers": route.transfers}
+
+
 def _tool(name: str, description: str, properties: dict) -> dict:
     return {
         "type": "function",
@@ -208,11 +225,26 @@ COARSE_TOOLS = [
     ),
 ]
 
+# 경로 탐색 도구: 가장 빠른 경로를 도구가 고른다. 시한 비교는 LLM이 한다
+SEARCH_TOOLS = [
+    FINE_TOOLS[0],
+    _tool(
+        "shortest_route",
+        "출발역에서 도착역까지 가장 빠른 경로를 돌려준다. 경로는 지나는 역을 빠짐없이, "
+        "갈아타는 역은 내리는 호선으로 한 번, 타는 호선으로 한 번 쓴다. "
+        "소요 시간(초, 환승 포함)과 환승 횟수도 돌려준다. "
+        "max_transfers는 환승 횟수 상한이고, 제한이 없으면 null이다. "
+        "상한을 지키는 길이 없으면 no_route가 true다. "
+        "데이터에 없는 역이면 이름이 비슷한 역 후보를 돌려준다.",
+        {"origin": _STR, "dest": _STR, "max_transfers": {"type": ["integer", "null"]}},
+    ),
+]
+
 _FUNCS = {"find_station": find_station, "line_stations": line_stations,
           "travel_seconds": travel_seconds, "transfer_seconds": transfer_seconds,
-          "route_seconds": route_seconds}
+          "route_seconds": route_seconds, "shortest_route": shortest_route}
 _TYPES = {"name": str, "from_station": str, "to_station": str, "station": str,
-          "line": int, "from_line": int, "to_line": int}
+          "line": int, "from_line": int, "to_line": int, "origin": str, "dest": str}
 
 
 def _valid_path(value) -> bool:
@@ -239,6 +271,8 @@ def call_tool(name: str, arguments: str, tools: list[dict]) -> str:
     for key, value in args.items():
         if key == "path":
             ok = _valid_path(value)
+        elif key == "max_transfers":
+            ok = value is None or (isinstance(value, int) and not isinstance(value, bool))
         else:
             ok = isinstance(value, _TYPES[key]) and not isinstance(value, bool)
         if not ok:

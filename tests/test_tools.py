@@ -1,17 +1,22 @@
 import csv
+import inspect
 import json
 from itertools import pairwise
 
 import pytest
 
 from subway_route_agent.data import ROOT, TRANSFER_DATA, load_rows, load_transfers, parse_mmss
+from subway_route_agent.route import shortest
 from subway_route_agent.tools import (
     COARSE_TOOLS,
     FINE_TOOLS,
+    SEARCH_TOOLS,
+    _graph,
     call_tool,
     find_station,
     line_stations,
     route_seconds,
+    shortest_route,
     transfer_seconds,
     travel_seconds,
 )
@@ -131,9 +136,11 @@ def test_travel_seconds_same_station_is_zero_and_unknown_station_is_error():
     assert "error" in travel_seconds(9, "강남", "홍대입구")
 
 
-def test_tools_module_does_not_import_shortest():
-    src = (ROOT / "src" / "subway_route_agent" / "tools.py").read_text(encoding="utf-8")
-    assert "shortest" not in src
+def test_only_shortest_route_calls_route_shortest():
+    # 잘게 나눈 도구·크게 묶은 도구는 정답 함수를 부르지 않는다. 경로 탐색 도구만 부른다(#223)
+    for fn in (find_station, line_stations, travel_seconds, transfer_seconds, route_seconds):
+        assert "shortest(" not in inspect.getsource(fn)
+    assert "shortest(" in inspect.getsource(shortest_route)
 
 
 def test_tools_definitions_are_strict_function_tools_without_recommendation_words():
@@ -375,3 +382,79 @@ def test_line_stations_tool_description_explains_main_and_branches():
     tool = next(t for t in FINE_TOOLS if t["name"] == "line_stations")
     assert ("main은 본선, branches는 갈라지는 역에서 시작하는 지선이다. "
             "지선과 본선은 갈라지는 역에서만 이어진다") in tool["description"]
+
+
+# --- 경로 탐색 도구 shortest_route (#223) ---
+
+def test_shortest_route_matches_route_shortest_for_q2():
+    res = shortest_route("서울역", "잠실", None)
+    truth = shortest(_graph(), "서울역", "잠실", None)
+    assert res["seconds"] == truth.seconds == 1298
+    assert res["transfers"] == truth.transfers
+    assert res["path"] == [{"station": n[0], "line": n[1]} for n in truth.nodes]
+    # 갈아타는 역은 두 번(내리는 호선·타는 호선) 나온다
+    stations = [s["station"] for s in res["path"]]
+    assert any(a == b for a, b in pairwise(stations)) == (truth.transfers > 0)
+
+
+def test_shortest_route_respects_transfer_cap_q9():
+    res = shortest_route("수락산", "시청", 1)
+    assert res["seconds"] == 2204 and res["transfers"] == 1
+
+
+def test_shortest_route_no_route_q7():
+    assert shortest_route("서울역", "강남", 0) == {"no_route": True}
+
+
+def test_shortest_route_unknown_station_returns_error_and_candidates():
+    res = shortest_route("홍대", "잠실", None)
+    assert "error" in res and res["candidates"] == find_station("홍대")["candidates"]
+    res = shortest_route("서울역", "없는역", None)
+    assert "error" in res and res["candidates"] == []
+
+
+def test_shortest_route_applies_alias():
+    res = shortest_route("총신대입구", "잠실", None)
+    assert res["path"][0]["station"] == "이수"
+
+
+def test_shortest_route_output_keys():
+    allowed = {"path", "seconds", "transfers", "no_route", "error", "candidates"}
+    for res in (shortest_route("서울역", "잠실", None), shortest_route("서울역", "강남", 0),
+                shortest_route("없는역", "잠실", None)):
+        assert set(res) <= allowed
+
+
+def test_search_tools_schema_is_strict_with_nullable_cap():
+    assert [t["name"] for t in SEARCH_TOOLS] == ["find_station", "shortest_route"]
+    spec = SEARCH_TOOLS[1]
+    assert spec["strict"] is True
+    assert spec["parameters"]["required"] == ["origin", "dest", "max_transfers"]
+    assert spec["parameters"]["properties"]["max_transfers"] == {"type": ["integer", "null"]}
+
+
+def test_call_tool_runs_shortest_route_and_validates_cap():
+    out = call_tool("shortest_route",
+                    '{"origin":"서울역","dest":"잠실","max_transfers":null}', SEARCH_TOOLS)
+    assert json.loads(out)["seconds"] == 1298
+    out = call_tool("shortest_route",
+                    '{"origin":"수락산","dest":"시청","max_transfers":1}', SEARCH_TOOLS)
+    assert json.loads(out)["seconds"] == 2204
+    for bad in ("true", '"1"', "1.5"):
+        out = call_tool("shortest_route",
+                        f'{{"origin":"서울역","dest":"잠실","max_transfers":{bad}}}', SEARCH_TOOLS)
+        assert json.loads(out) == {"error": "max_transfers의 형식이 다르다"}
+
+
+def test_call_tool_rejects_shortest_route_in_other_tool_sets():
+    args = '{"origin":"서울역","dest":"잠실","max_transfers":null}'
+    for tools in (FINE_TOOLS, COARSE_TOOLS):
+        assert json.loads(call_tool("shortest_route", args, tools)) == {
+            "error": "모르는 도구: shortest_route"}
+
+
+def test_tools_graph_equals_answer_graph():
+    # 도구 그래프(transfers=None)는 cli가 정답을 구하는 그래프와 같다
+    from subway_route_agent.graph import build_graph
+
+    assert _graph() == build_graph(load_rows(), load_transfers())
