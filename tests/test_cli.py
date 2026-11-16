@@ -434,12 +434,14 @@ def test_render_compare_says_no_when_both_answerers_have_identical_rounds():
     assert "d = +0.00, e = 0.00" in line and line.endswith("|d| ≥ e: 아니오")
 
 
-def test_render_compare_has_no_mean_difference_lines_for_one_round_or_not_two_answerers():
+def test_render_compare_has_no_mean_difference_lines_for_one_round():
     g = build_graph([Row(1, "A", 0), Row(1, "B", 60)])
     one = {"x": _rounds_with_hits([2]), "y": _rounds_with_hits([3])}
     assert "|d| ≥ e" not in render_compare("d.csv", one, {}, g)
+    three_one = {k: _rounds_with_hits([2]) for k in "xyz"}
+    assert "|d| ≥ e" not in render_compare("d.csv", three_one, {}, g)
     three = {k: _rounds_with_hits([2, 3]) for k in "xyz"}
-    assert "|d| ≥ e" not in render_compare("d.csv", three, {}, g)
+    assert "- x 대 z 정답률(맞은 질문 수):" in render_compare("d.csv", three, {}, g)
     two = {k: _rounds_with_hits([2, 3]) for k in "xy"}
     assert "|d| ≥ e" in render_compare("d.csv", two, {}, g)
 
@@ -743,3 +745,57 @@ def test_render_compare_with_repeat_names_each_model_in_the_head():
     text = render_compare("d.csv", {"x": r, "stub": r}, {"x": "gpt-test", "stub": None}, g)
     assert "- x (모델 gpt-test)" in text
     assert "stub (모델" not in text  # 모델이 없는 답하는 쪽은 줄이 없다
+
+
+def _three_answerer_text():
+    from subway_route_agent.report import render_compare as rc
+
+    g = build_graph([Row(1, "A", 0), Row(1, "B", 60)])
+    by = {"llm-tools": _rounds_with_hits([2, 3, 3, 2, 2]),
+          "llm-tools-coarse": _rounds_with_hits([3, 2, 2, 5, 4]),
+          "llm-tools-search": _rounds_with_hits([8, 9, 8, 9, 8])}
+    return rc("d.csv", by, {}, g)
+
+
+def test_render_compare_three_answerers_write_mean_difference_per_pair():
+    text = _three_answerer_text()
+    lines = [ln for ln in text.splitlines() if "정답률(맞은 질문 수)" in ln and ln.startswith("- ")]
+    pairs = [("llm-tools", "llm-tools-coarse"), ("llm-tools", "llm-tools-search"),
+             ("llm-tools-coarse", "llm-tools-search")]
+    assert len(lines) == 3
+    for line, (a, b) in zip(lines, pairs, strict=True):
+        assert line.startswith(f"- {a} 대 {b} ") and f"{a} 평균" in line and f"{b} 평균" in line
+    # 지표마다 짝마다 한 줄: 4개 지표 x 3짝
+    assert sum(ln.startswith("- llm-tools") and " 대 " in ln.split(":")[0] for ln in
+               text.splitlines()) == 12
+    second = lines[1]
+    assert "d = -6.00" in second and "|d| ≥ e: 예" in second
+
+
+def test_render_compare_two_answerers_diff_lines_unchanged():
+    g = build_graph([Row(1, "A", 0), Row(1, "B", 60)])
+    by = {"x": _rounds_with_hits([2, 2, 3, 2, 2]), "y": _rounds_with_hits([8, 8, 9, 8, 8])}
+    text = render_compare("d.csv", by, {}, g)
+    assert text.count("- 평균 차이 d = x 평균 − y 평균") == 1
+    assert sum(ln.startswith("- 정답률(맞은 질문 수):") for ln in text.splitlines()) == 1
+    assert " 대 " not in "".join(ln for ln in text.splitlines() if ln.startswith("- 정답률"))
+
+
+def test_render_compare_three_answerers_head_names_three_tool_sets_and_search_note():
+    from subway_route_agent.tools import COARSE_TOOLS, FINE_TOOLS, SEARCH_TOOLS
+
+    text = _three_answerer_text()
+    for tools in (FINE_TOOLS, COARSE_TOOLS, SEARCH_TOOLS):
+        assert ", ".join(t["name"] for t in tools) in text
+    head = next(ln for ln in text.splitlines() if ln.startswith("- 도구 구성:"))
+    assert "llm-tools-search = find_station, shortest_route" in head
+    assert "- 경로 탐색 도구는 정답과 같은 다익스트라(`route.shortest`)를 부른다" in text
+    # 「경로는 직접 고른다」는 경로 탐색 지시문에 없다. 머리 줄이 셋 모두에 있다고 하지 않는다
+    assert "- llm-tools-search 지시문에는 「경로는 직접 고른다」가 없다" in text
+
+
+def test_render_compare_without_search_has_no_search_note():
+    g = build_graph([Row(1, "A", 0), Row(1, "B", 60)])
+    r = [[_result("q1", True)]]
+    text = render_compare("d.csv", {"llm-tools": r, "llm-tools-coarse": r}, {}, g)
+    assert "다익스트라" not in text

@@ -1,12 +1,12 @@
 import statistics
 from dataclasses import dataclass
-from itertools import pairwise
+from itertools import combinations, pairwise
 
 from subway_route_agent.answerers import LIMIT_REACHED, Answer
 from subway_route_agent.grade import Grade, fill_path, path_seconds
 from subway_route_agent.graph import TRANSFER_SECONDS, Graph, TransferCounts
 from subway_route_agent.route import Route
-from subway_route_agent.tools import COARSE_TOOLS, FINE_TOOLS
+from subway_route_agent.tools import COARSE_TOOLS, FINE_TOOLS, SEARCH_TOOLS
 
 COLUMNS = [
     "질문", "정답 경로", "정답 시간", "답 있음", "맞음", "채운 역", "지어낸 역",
@@ -114,8 +114,13 @@ COMPARE_DIFF = (
     "LLM + 도구 지시문에만 도구 안내 한 문장과 「환승 시간은 역과 호선마다 다르다. "
     "경로는 직접 고른다」 문장이 있다"
 )
+SEARCH_DIFF = ("llm-tools-search 지시문에는 「경로는 직접 고른다」가 없다. "
+               "도구가 가장 빠른 경로를 고르기 때문이다")
 COARSE_NOTE = "크게 묶은 도구는 한 호선의 역 목록을 볼 수 없다"
+SEARCH_NOTE = "경로 탐색 도구는 정답과 같은 다익스트라(`route.shortest`)를 부른다"
 TOOL_ANSWERERS = ("llm-tools", "llm-tools-coarse")
+TOOL_CONFIGS = {"llm-tools": FINE_TOOLS, "llm-tools-coarse": COARSE_TOOLS,
+                "llm-tools-search": SEARCH_TOOLS}
 COMPARE_COLUMNS = ["맞음", "채운 역", "답 경로 소요 시간", "답이 말한 시간"]
 METRIC_COLUMNS = [
     "정답률", "지어낸 역", "지어낸 소요 시간", "질문당 도구 호출", "질문당 응답 시간(초)",
@@ -175,17 +180,30 @@ DIFF_METRICS = [(0, "정답률(맞은 질문 수)"), (3, "질문당 도구 호�
 
 
 def _diff_lines(names: list[str], by_answerer: dict[str, list[list[Result]]]) -> list[str]:
-    """답하는 쪽 둘의 회차별 평균 차이 d와 표준오차의 2배 e. 지표마다 한 줄이다."""
-    a, b = names
+    """답하는 쪽 둘씩 짝지어 회차별 평균 차이 d와 표준오차의 2배 e를 쓴다. 지표마다 한 줄이다.
+
+    셋 이상이면 짝은 (앞, 뒤) 순서대로 모든 조합이고, 줄 머리에 두 이름을 쓴다.
+    """
     per = {name: [_metrics(rs) for rs in by_answerer[name]] for name in names}
-    lines = [f"- 평균 차이 d = {a} 평균 − {b} 평균, e = 2 × √(s₁²/n₁ + s₂²/n₂)"
+    multi = len(names) > 2
+    first = "앞 이름" if multi else names[0]
+    second = "뒤 이름" if multi else names[1]
+    lines = [f"- 평균 차이 d = {first} 평균 − {second} 평균, e = 2 × √(s₁²/n₁ + s₂²/n₂)"
              "(s는 회차별 값의 표준편차, n은 회차 수)"]
+    for a, b in combinations(names, 2):
+        lines += _pair_lines(a, b, per, f"{a} 대 {b} " if multi else "")
+    return lines
+
+
+def _pair_lines(a: str, b: str, per: dict[str, list[list[float]]], head: str) -> list[str]:
+    lines = []
     for c, label in DIFF_METRICS:
         xs, ys = [v[c] for v in per[a]], [v[c] for v in per[b]]
         d = statistics.mean(xs) - statistics.mean(ys)
         e = 2 * (statistics.variance(xs) / len(xs) + statistics.variance(ys) / len(ys)) ** 0.5
         lines.append(
-            f"- {label}: {a} 평균 {statistics.mean(xs):.2f}(표준편차 {statistics.stdev(xs):.2f}), "
+            f"- {head}{label}: {a} 평균 {statistics.mean(xs):.2f}"
+            f"(표준편차 {statistics.stdev(xs):.2f}), "
             f"{b} 평균 {statistics.mean(ys):.2f}(표준편차 {statistics.stdev(ys):.2f}). "
             f"d = {d:+.2f}, e = {e:.2f}, |d| ≥ e: {'예' if d != 0 and abs(d) >= e else '아니오'}")
     return lines
@@ -212,14 +230,19 @@ def render_compare(
         f"- 데이터: {data_name} (서울 열린데이터광장 OA-12034, 2024-08-10 기준, 1~8호선)",
         *transfer_head(counts),
         *([f"- {COMPARE_DIFF}"] if any(a in by_answerer for a in TOOL_ANSWERERS) else []),
+        *([f"- {SEARCH_DIFF}"] if "llm-tools-search" in by_answerer else []),
     ]
-    if all(a in by_answerer for a in TOOL_ANSWERERS):
-        fine = ", ".join(t["name"] for t in FINE_TOOLS)
-        coarse = ", ".join(t["name"] for t in COARSE_TOOLS)
-        lines.append(f"- 도구 구성: llm-tools = {fine} / llm-tools-coarse = {coarse}. "
-                     "두 지시문은 도구 안내 한 문장만 다르다")
+    present = [a for a in TOOL_CONFIGS if a in by_answerer]
+    if all(a in by_answerer for a in TOOL_ANSWERERS) or len(present) > 2:
+        configs = " / ".join(
+            f"{a} = {', '.join(t['name'] for t in TOOL_CONFIGS[a])}" for a in present)
+        same = "두 지시문은 도구 안내 한 문장만 다르다" if len(present) == 2 else (
+            "지시문은 도구 안내 문장이 구성마다 다르다")
+        lines.append(f"- 도구 구성: {configs}. {same}")
     if "llm-tools-coarse" in by_answerer:
         lines.append(f"- {COARSE_NOTE}")
+    if "llm-tools-search" in by_answerer:
+        lines.append(f"- {SEARCH_NOTE}")
     if n_rounds == 1:
         for name in names:
             rs = by_answerer[name][0]
@@ -248,7 +271,7 @@ def render_compare(
                   "| " + " | ".join("---" for _ in metric_columns) + " |"]
         for name in names:
             lines += _metric_rows(name, by_answerer[name])
-        if len(names) == 2:
+        if len(names) >= 2:
             lines += ["", *_diff_lines(names, by_answerer)]
         columns = ["질문", "정답 시간"] + [
             f"{name} {c}" for name in names for c in ("맞은 횟수", "도구 호출")]
