@@ -4,7 +4,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from functools import cache
 
-from subway_route_agent.tools import COARSE_TOOLS, FINE_TOOLS, call_tool
+from subway_route_agent.tools import COARSE_TOOLS, FINE_TOOLS, SEARCH_TOOLS, call_tool
 
 
 @dataclass
@@ -37,7 +37,9 @@ SYSTEM = (
     "갈아타는 역은 내리는 호선으로 한 번, 타는 호선으로 한 번, 같은 역을 두 번 쓴다. "
     "seconds는 전체 소요 시간을 초 단위 정수로 쓴다. 모르면 null이다. "
     "조건을 지키는 길이 없으면 no_route를 true로, path를 빈 목록으로 쓴다. "
-    "길이 있으면 no_route는 false다."
+    "길이 있으면 no_route는 false다. "
+    "출발 시각과 도착 시한이 둘 다 있으면 출발 시각에 소요 시간을 더해 "
+    "시한보다 늦은지 확인하고, 늦으면 길이 없는 것이다."
 )
 
 SCHEMA = {
@@ -130,6 +132,11 @@ TOOLS_SYSTEM = (
     SYSTEM + " 도구로 역·노선·한 호선 안 소요 시간·환승 시간을 확인할 수 있다." + _TOOLS_TAIL
 )
 COARSE_SYSTEM = SYSTEM + " 도구로 고른 경로의 전체 소요 시간을 확인할 수 있다." + _TOOLS_TAIL
+# 경로 탐색 도구는 경로를 도구가 고른다. 「경로는 직접 고른다」는 이 구성의 뜻과 반대라 넣지 않는다
+SEARCH_SYSTEM = (
+    SYSTEM + " 도구로 역과 두 역 사이의 가장 빠른 경로(환승 상한 반영)를 확인할 수 있다."
+    " 환승 시간은 역과 호선마다 다르다."
+)
 
 
 def make_llm_tools(
@@ -203,6 +210,11 @@ def _llm_tools_coarse() -> Callable[[str], Answer]:
     return make_llm_tools(tools=COARSE_TOOLS, system=COARSE_SYSTEM)
 
 
+@cache
+def _llm_tools_search() -> Callable[[str], Answer]:
+    return make_llm_tools(tools=SEARCH_TOOLS, system=SEARCH_SYSTEM)
+
+
 # 답하는 쪽은 질문 문장만 받는다. 구조화된 필드는 채점만 쓴다.
 # llm은 첫 호출 때 client를 만든다 (import만으로 키가 필요하면 안 된다)
 ANSWERERS: dict[str, Callable[[str], Answer]] = {
@@ -210,4 +222,5 @@ ANSWERERS: dict[str, Callable[[str], Answer]] = {
     "llm": lambda text: _llm()(text),
     "llm-tools": lambda text: _llm_tools()(text),
     "llm-tools-coarse": lambda text: _llm_tools_coarse()(text),
+    "llm-tools-search": lambda text: _llm_tools_search()(text),
 }

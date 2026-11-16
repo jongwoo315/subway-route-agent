@@ -13,7 +13,7 @@ from subway_route_agent.grade import _minutes, grade
 from subway_route_agent.graph import ALIASES, Graph, build_graph, count_transfers
 from subway_route_agent.report import Result, render, render_compare
 from subway_route_agent.route import Route, shortest
-from subway_route_agent.tools import COARSE_TOOLS, FINE_TOOLS
+from subway_route_agent.tools import COARSE_TOOLS, FINE_TOOLS, SEARCH_TOOLS
 
 QUESTIONS = ROOT / "data" / "questions.json"
 REPORT_DIR = ROOT / "reports"
@@ -40,8 +40,9 @@ def truth_for(g: Graph, q: dict) -> Route | None:
     return route
 
 
-LLM_ANSWERERS = ("llm", "llm-tools", "llm-tools-coarse")
-TOOL_SETS = {"llm-tools": FINE_TOOLS, "llm-tools-coarse": COARSE_TOOLS}
+LLM_ANSWERERS = ("llm", "llm-tools", "llm-tools-coarse", "llm-tools-search")
+TOOL_SETS = {"llm-tools": FINE_TOOLS, "llm-tools-coarse": COARSE_TOOLS,
+             "llm-tools-search": SEARCH_TOOLS}
 
 
 def _raw_path(raw: Path, name: str, many: bool, rnd: int, repeat: int) -> Path:
