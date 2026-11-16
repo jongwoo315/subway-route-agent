@@ -11,8 +11,8 @@ def test_stub_returns_empty_answer_for_any_text():
         assert (a.parse_error, a.tokens, a.raw) == (None, 0, None)
 
 
-def test_registry_has_stub_llm_and_llm_tools():
-    assert list(ANSWERERS) == ["stub", "llm", "llm-tools"]
+def test_registry_has_stub_llm_and_both_tool_configurations():
+    assert list(ANSWERERS) == ["stub", "llm", "llm-tools", "llm-tools-coarse"]
 
 
 def test_questions_file_has_ten_questions_with_fields():
@@ -20,3 +20,7 @@ def test_questions_file_has_ten_questions_with_fields():
     assert [q["id"] for q in qs] == [f"q{i}" for i in range(1, 11)]
     for q in qs:
         assert {"text", "origin", "dest", "max_transfers", "depart", "arrive_by"} <= q.keys()
+
+
+def test_answer_no_route_defaults_to_false():
+    assert Answer().no_route is False

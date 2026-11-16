@@ -4,7 +4,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from functools import cache
 
-from subway_route_agent.tools import TOOLS, call_tool
+from subway_route_agent.tools import COARSE_TOOLS, FINE_TOOLS, call_tool
 
 
 @dataclass
@@ -16,6 +16,7 @@ class Answer:
     tokens: int = 0  # 입력 + 출력 토큰
     raw: str | None = None  # LLM 원문
     tool_log: list[dict] = field(default_factory=list)  # 도구 호출마다 {name, arguments, output}
+    no_route: bool = False  # 조건을 지키는 길이 없다고 답했다. 이때 path는 비어 있다
 
 
 def stub(question_text: str) -> Answer:
@@ -34,7 +35,9 @@ SYSTEM = (
     "출발역부터 도착역까지 지나는 역을 빠짐없이 순서대로 path에 쓰고, "
     "역마다 그 구간에서 탄 호선 번호(1~8)를 line에 쓴다. "
     "갈아타는 역은 내리는 호선으로 한 번, 타는 호선으로 한 번, 같은 역을 두 번 쓴다. "
-    "seconds는 전체 소요 시간을 초 단위 정수로 쓴다. 모르면 null이다."
+    "seconds는 전체 소요 시간을 초 단위 정수로 쓴다. 모르면 null이다. "
+    "조건을 지키는 길이 없으면 no_route를 true로, path를 빈 목록으로 쓴다. "
+    "길이 있으면 no_route는 false다."
 )
 
 SCHEMA = {
@@ -50,21 +53,30 @@ SCHEMA = {
             },
         },
         "seconds": {"type": ["integer", "null"]},
+        "no_route": {"type": "boolean"},
     },
-    "required": ["path", "seconds"],
+    "required": ["path", "seconds", "no_route"],
     "additionalProperties": False,
 }
 
 
-def _parse(raw: str) -> tuple[list[tuple[str, int]], int | None]:
-    """원문을 (path, seconds)로 읽는다. 읽지 못하면 ValueError(이유 한 줄)."""
+def _parse(raw: str) -> tuple[list[tuple[str, int]], int | None, bool]:
+    """원문을 (path, seconds, no_route)로 읽는다. 읽지 못하면 ValueError(이유 한 줄).
+
+    no_route 필드가 없으면 false다(녹화 fixture가 이 필드 없이 녹화됐다).
+    """
     try:
         data = json.loads(raw)
     except json.JSONDecodeError as e:
         raise ValueError(f"JSON이 아니다: {e.msg}") from e
     if not isinstance(data, dict) or not isinstance(data.get("path"), list):
         raise ValueError("path 목록이 없다")
-    if not data["path"]:
+    no_route = data.get("no_route", False)
+    if not isinstance(no_route, bool):
+        raise ValueError("no_route가 true나 false가 아니다")
+    if no_route and data["path"]:
+        raise ValueError("no_route가 true인데 path가 비어 있지 않다")
+    if not data["path"] and not no_route:
         raise ValueError("path가 비어 있다")
     path = []
     for i, step in enumerate(data["path"]):
@@ -75,7 +87,7 @@ def _parse(raw: str) -> tuple[list[tuple[str, int]], int | None]:
     sec = data.get("seconds")
     if sec is not None and (not isinstance(sec, int) or isinstance(sec, bool)):
         raise ValueError("seconds가 정수나 null이 아니다")
-    return path, sec
+    return path, sec, no_route
 
 
 def make_llm(client=None) -> Callable[[str], Answer]:
@@ -100,10 +112,10 @@ def make_llm(client=None) -> Callable[[str], Answer]:
         if status != "completed":  # 거절·토큰 한도로 끊긴 응답은 JSON 오류와 구분한다
             return Answer(parse_error=f"응답이 끝나지 않았다({status})", raw=raw, tokens=tokens)
         try:
-            path, seconds = _parse(raw)
+            path, seconds, no_route = _parse(raw)
         except ValueError as e:
             return Answer(parse_error=str(e), raw=raw, tokens=tokens)
-        return Answer(path=path, seconds=seconds, raw=raw, tokens=tokens)
+        return Answer(path=path, seconds=seconds, raw=raw, tokens=tokens, no_route=no_route)
 
     return llm
 
@@ -111,16 +123,19 @@ def make_llm(client=None) -> Callable[[str], Answer]:
 TOOL_CALL_LIMIT = 25
 LIMIT_REACHED = f"도구 호출 상한({TOOL_CALL_LIMIT})에 닿았다"  # 리포트가 이 문자열로 센다
 
-# LLM + 도구: 답 형식 설명은 SYSTEM 그대로. 역 목록·정답·질문별 힌트는 넣지 않는다
+# LLM + 도구: 답 형식 설명은 SYSTEM 그대로. 역 목록·정답·질문별 힌트는 넣지 않는다.
+# 두 도구 구성의 지시문은 도구 안내 한 문장만 다르다
+_TOOLS_TAIL = " 환승 시간은 역과 호선마다 다르다. 경로는 직접 고른다."
 TOOLS_SYSTEM = (
-    SYSTEM
-    + " 도구로 역·노선·한 호선 안 소요 시간을 확인할 수 있다."
-    + " 환승 시간은 역과 호선마다 다르다. 경로는 직접 고른다."
+    SYSTEM + " 도구로 역·노선·한 호선 안 소요 시간·환승 시간을 확인할 수 있다." + _TOOLS_TAIL
 )
+COARSE_SYSTEM = SYSTEM + " 도구로 고른 경로의 전체 소요 시간을 확인할 수 있다." + _TOOLS_TAIL
 
 
-def make_llm_tools(client=None) -> Callable[[str], Answer]:
-    """질문 문장과 도구 셋을 LLM에 주고, 도구 호출이 없는 응답이 올 때까지 되풀이하는 답하는 쪽."""
+def make_llm_tools(
+    client=None, tools: list[dict] = FINE_TOOLS, system: str = TOOLS_SYSTEM,
+) -> Callable[[str], Answer]:
+    """질문 문장과 도구 구성을 LLM에 주고, 도구 호출 없는 응답이 올 때까지 되풀이하는 답하는 쪽."""
     if client is None:
         import openai
 
@@ -133,9 +148,9 @@ def make_llm_tools(client=None) -> Callable[[str], Answer]:
         while True:
             resp = client.responses.create(
                 model=MODEL,
-                instructions=TOOLS_SYSTEM,
+                instructions=system,
                 input=items,
-                tools=TOOLS,
+                tools=tools,
                 text={"format": {"type": "json_schema", "name": "route", "schema": SCHEMA,
                                  "strict": True}},
             )
@@ -153,7 +168,7 @@ def make_llm_tools(client=None) -> Callable[[str], Answer]:
                         tool_log=tool_log,
                     )
                 tool_calls += 1
-                output = call_tool(c.name, c.arguments)
+                output = call_tool(c.name, c.arguments, tools)
                 tool_log.append({"name": c.name, "arguments": c.arguments, "output": output[:200]})
                 items.append({"type": "function_call_output", "call_id": c.call_id,
                               "output": output})
@@ -163,12 +178,12 @@ def make_llm_tools(client=None) -> Callable[[str], Answer]:
             return Answer(parse_error=f"응답이 끝나지 않았다({status})", raw=raw,
                           tokens=tokens, tool_calls=tool_calls, tool_log=tool_log)
         try:
-            path, seconds = _parse(raw)
+            path, seconds, no_route = _parse(raw)
         except ValueError as e:
             return Answer(parse_error=str(e), raw=raw, tokens=tokens, tool_calls=tool_calls,
                           tool_log=tool_log)
         return Answer(path=path, seconds=seconds, raw=raw, tokens=tokens, tool_calls=tool_calls,
-                      tool_log=tool_log)
+                      tool_log=tool_log, no_route=no_route)
 
     return llm_tools
 
@@ -183,10 +198,16 @@ def _llm_tools() -> Callable[[str], Answer]:
     return make_llm_tools()
 
 
+@cache
+def _llm_tools_coarse() -> Callable[[str], Answer]:
+    return make_llm_tools(tools=COARSE_TOOLS, system=COARSE_SYSTEM)
+
+
 # 답하는 쪽은 질문 문장만 받는다. 구조화된 필드는 채점만 쓴다.
 # llm은 첫 호출 때 client를 만든다 (import만으로 키가 필요하면 안 된다)
 ANSWERERS: dict[str, Callable[[str], Answer]] = {
     "stub": stub,
     "llm": lambda text: _llm()(text),
     "llm-tools": lambda text: _llm_tools()(text),
+    "llm-tools-coarse": lambda text: _llm_tools_coarse()(text),
 }

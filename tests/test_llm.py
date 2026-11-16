@@ -71,6 +71,45 @@ def test_unreadable_answer_sets_parse_error_without_raising(bad):
     assert ans.raw == bad and ans.tokens == 10
 
 
+NO_ROUTE = json.dumps({"path": [], "seconds": None, "no_route": True})
+
+
+def test_no_route_true_with_empty_path_is_a_valid_answer():
+    ans = make_llm(FakeClient(NO_ROUTE, tokens=(7, 3)))("질문")
+    assert ans.no_route is True and ans.path == [] and ans.parse_error is None
+    assert ans.raw == NO_ROUTE and ans.tokens == 10
+
+
+def test_missing_no_route_field_means_false():
+    # 녹화 fixture는 이 필드 없이 녹화됐다
+    assert make_llm(FakeClient(GOOD))("질문").no_route is False
+    ans = make_llm(FakeClient(json.dumps({"path": [], "seconds": None})))("질문")
+    assert ans.no_route is False and ans.parse_error  # 빈 path는 여전히 파싱 실패다
+
+
+def test_no_route_false_with_path_is_a_normal_answer():
+    raw = json.dumps({"path": [{"station": "강남", "line": 2}], "seconds": 0, "no_route": False})
+    ans = make_llm(FakeClient(raw))("질문")
+    assert ans.no_route is False and ans.path == [("강남", 2)] and ans.parse_error is None
+
+
+@pytest.mark.parametrize("bad", [
+    json.dumps({"path": [{"station": "강남", "line": 2}], "seconds": None, "no_route": True}),
+    json.dumps({"path": [], "seconds": None, "no_route": "true"}),
+])
+def test_no_route_true_with_path_or_non_bool_is_parse_error(bad):
+    ans = make_llm(FakeClient(bad))("질문")
+    assert ans.parse_error and ans.no_route is False and ans.path == []
+
+
+def test_schema_requires_no_route_boolean_and_system_explains_it():
+    assert answerers.SCHEMA["properties"]["no_route"] == {"type": "boolean"}
+    assert set(answerers.SCHEMA["required"]) == set(answerers.SCHEMA["properties"])
+    assert "no_route" in answerers.SCHEMA["required"]
+    assert ("조건을 지키는 길이 없으면 no_route를 true로, path를 빈 목록으로 쓴다. "
+            "길이 있으면 no_route는 false다") in answerers.SYSTEM
+
+
 def test_missing_usage_and_unfinished_status_do_not_crash():
     client = FakeClient(GOOD)
     client._resp.usage = None
@@ -103,7 +142,7 @@ def test_registry_has_stub_and_llm_without_building_client(monkeypatch):
         raise AssertionError("OpenAI()가 불렸다")
 
     monkeypatch.setattr(openai, "OpenAI", boom)
-    assert list(ANSWERERS) == ["stub", "llm", "llm-tools"]
+    assert list(ANSWERERS) == ["stub", "llm", "llm-tools", "llm-tools-coarse"]
     assert isinstance(ANSWERERS["stub"]("x"), Answer)
 
 

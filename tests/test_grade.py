@@ -102,6 +102,23 @@ def test_answer_to_question_without_truth_is_answered_but_never_correct():
     assert not g.answered and not g.correct
 
 
+def test_no_route_answer_is_correct_only_for_question_without_truth():
+    q = _q(max_transfers=0)
+    says_none = Answer(no_route=True)
+    g = grade(G, q, says_none, None)
+    assert g.answered and g.correct
+    assert g.violations == [] and g.invented_stations == 0 and g.invented_time == 0
+    truth = shortest(G, "A", "C", max_transfers=0)
+    g = grade(G, q, says_none, truth)
+    assert g.answered and not g.correct and g.violations == []
+
+
+def test_path_answer_to_no_truth_question_stays_wrong_when_no_route_is_false():
+    path = shortest(G, "A", "C", max_transfers=0).nodes
+    g = grade(G, _q(max_transfers=0), Answer(path=path, seconds=660, no_route=False), None)
+    assert g.answered and not g.correct
+
+
 # --- #193 빠진 중간 역 채우기 ---------------------------------------------------
 
 
