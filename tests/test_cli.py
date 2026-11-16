@@ -808,3 +808,24 @@ def test_render_compare_two_tool_sets_with_search_still_names_both_configs():
     head = next(ln for ln in text.splitlines() if ln.startswith("- 도구 구성:"))
     assert "llm-tools-search = find_station, shortest_route" in head
     assert "한 문장만 다르다" not in head  # 검색 구성은 지시문 차이가 한 문장이 아니다
+
+
+def test_search_report_names_its_tools(monkeypatch, tmp_path):
+    from subway_route_agent.answerers import ANSWERERS
+
+    reports = _fake_answerers(monkeypatch, tmp_path)
+    monkeypatch.setenv("OPENAI_API_KEY", "dummy")
+    monkeypatch.setitem(ANSWERERS, "llm-tools-search", lambda text: Answer(tool_calls=1))
+    assert main(["--answerer", "llm-tools-search"]) == 0
+    text = (reports / "llm-tools-search.md").read_text(encoding="utf-8")
+    assert "- 도구: find_station, shortest_route (호출 상한 25)" in text
+
+
+def test_render_compare_search_lines_appear_only_with_search():
+    g = build_graph([Row(1, "A", 0), Row(1, "B", 60)])
+    r = [[_result("q1", True)]]
+    no_search = render_compare("d.csv", {"llm-tools": r, "llm-tools-coarse": r}, {}, g)
+    assert "llm-tools-search 지시문" not in no_search
+    only_search = render_compare("d.csv", {"llm-tools-search": r}, {}, g)
+    assert "- 도구 구성:" not in only_search  # 구성이 하나면 비교 줄이 없다
+    assert "크게 묶은 도구는 한 호선의 역 목록을 볼 수 없다" not in only_search
