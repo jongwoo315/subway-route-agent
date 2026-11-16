@@ -458,3 +458,9 @@ def test_tools_graph_equals_answer_graph():
     from subway_route_agent.graph import build_graph
 
     assert _graph() == build_graph(load_rows(), load_transfers())
+
+
+def test_call_tool_shortest_route_rejects_missing_cap_and_applies_alias_to_dest():
+    out = call_tool("shortest_route", '{"origin":"서울역","dest":"잠실"}', SEARCH_TOOLS)
+    assert json.loads(out) == {"error": "인자는 origin, dest, max_transfers이어야 한다"}
+    assert shortest_route("잠실", "총신대입구", None)["path"][-1]["station"] == "이수"
