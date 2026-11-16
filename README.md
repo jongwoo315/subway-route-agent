@@ -21,6 +21,64 @@
 
 - 전체: [docs/decisions.md](docs/decisions.md)
 
+## 사용 방법
+
+### 설치
+
+[uv](https://docs.astral.sh/uv/)와 Python 3.11 이상이 필요하다. 데이터 CSV는 repo에 들어 있어서 실행할 때 네트워크가 필요 없다(LLM 호출만 예외).
+
+```bash
+uv sync
+```
+
+### API 키
+
+`stub` 말고 다른 답하는 쪽은 OpenAI API를 부른다. 키는 환경변수로만 읽는다. `.env` 파일을 자동으로 읽지는 않으므로 셸에 export한다.
+
+```bash
+cp .env.example .env   # OPENAI_API_KEY를 채운다. OPENAI_MODEL은 비워 두면 gpt-5.4-mini
+set -a; source .env; set +a
+```
+
+### 실행
+
+```bash
+# 키 없이 끝까지 실행된다. 답하는 쪽 stub은 빈 답을 돌려줘서 정답률은 0%다
+uv run subway-eval
+
+# LLM 혼자
+uv run subway-eval --answerer llm
+
+# 도구 구성 셋을 같은 질문 셋에 5회씩 돌려 비교한다(#223과 같은 실행)
+uv run subway-eval --answerer llm-tools llm-tools-coarse llm-tools-search --repeat 5 --raw runs/compare.json
+```
+
+| 답하는 쪽 (`--answerer`) | 뜻 |
+| --- | --- |
+| `stub` | 빈 답을 돌려준다. 흐름이 끝까지 도는지만 본다 |
+| `llm` | LLM 혼자. 질문 문장만 받는다 |
+| `llm-tools` | LLM + 잘게 나눈 도구 4개(역 검색, 노선 조회, 한 호선 구간 시간, 환승 시간) |
+| `llm-tools-coarse` | LLM + 크게 묶은 도구 1개(고른 경로의 전체 소요 시간) |
+| `llm-tools-search` | LLM + 경로 탐색 도구(역 검색, 환승 상한을 반영한 최단 경로) | <!-- style-exempt -->
+
+| 옵션 | 뜻 |
+| --- | --- |
+| `--answerer A B …` | 답하는 쪽을 여러 개 고르면 비교 리포트를 쓴다 |
+| `--repeat N` | 답하는 쪽마다 질문 셋을 N번 실행한다. 2 이상이면 비교 리포트에 회차별 지표와 평균 차이 줄이 붙는다 |
+| `--out 경로` | 리포트를 쓸 곳. 기본은 `reports/<답하는 쪽>.md`, 여럿이면 `reports/compare.md` |
+| `--raw 경로` | 질문별 LLM 원문과 도구 호출 기록을 JSON으로 쓴다. `runs/`는 git이 무시한다 |
+
+질문 셋은 `data/questions.json`이다. 출발역·도착역·환승 상한·출발 시각·도착 시한을 질문마다 적고, 정답은 실행할 때 다익스트라가 계산한다. 용어와 리포트 열의 뜻은 [docs/concepts.md](docs/concepts.md)에 있다. <!-- style-exempt -->
+
+### 테스트
+
+API 키 없이 실행된다. LLM 응답은 `tests/fixtures`에 녹화해 둔 것을 쓴다. GitHub Actions도 같은 두 명령을 돌린다.
+
+```bash
+uv run pytest -q
+uv run ruff check .
+```
+
 ## 데이터
 
 - 출처: 서울 열린데이터광장 OA-12034 「서울교통공사 역간거리 및 소요시간」, 2024-08-10 기준
