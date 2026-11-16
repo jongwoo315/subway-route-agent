@@ -8,12 +8,13 @@ from subway_route_agent.answerers import (
     ANSWERERS,
     COARSE_SYSTEM,
     SCHEMA,
+    SEARCH_SYSTEM,
     TOOL_CALL_LIMIT,
     TOOLS_SYSTEM,
     make_llm_tools,
 )
 from subway_route_agent.data import ROOT
-from subway_route_agent.tools import COARSE_TOOLS, FINE_TOOLS
+from subway_route_agent.tools import COARSE_TOOLS, FINE_TOOLS, SEARCH_TOOLS
 
 GOOD = json.dumps({
     "path": [{"station": "강남", "line": 2}, {"station": "홍대입구", "line": 2}],
@@ -231,7 +232,8 @@ def test_registry_has_llm_tools_without_building_client(monkeypatch):
         raise AssertionError("OpenAI()가 불렸다")
 
     monkeypatch.setattr(openai, "OpenAI", boom)
-    assert list(ANSWERERS) == ["stub", "llm", "llm-tools", "llm-tools-coarse"]
+    assert list(ANSWERERS) == [
+        "stub", "llm", "llm-tools", "llm-tools-coarse", "llm-tools-search"]
     assert callable(ANSWERERS["llm-tools"]) and callable(ANSWERERS["llm-tools-coarse"])
 
 
@@ -298,3 +300,60 @@ def test_tools_answerer_accepts_no_route_and_both_system_prompts_explain_it():
         ans = make_llm_tools(FakeClient([response([SimpleNamespace(type="message")], text=raw)]),
                              tools, system)("질문")
         assert ans.no_route is True and ans.path == [] and ans.parse_error is None
+
+
+DEADLINE_SENTENCE = ("출발 시각과 도착 시한이 둘 다 있으면 출발 시각에 소요 시간을 더해 "
+                     "시한보다 늦은지 확인하고, 늦으면 길이 없는 것이다.")
+
+
+def test_system_ends_with_the_deadline_sentence_and_hints_no_station():
+    assert answerers.SYSTEM.endswith(" " + DEADLINE_SENTENCE)
+    for system in (answerers.SYSTEM, TOOLS_SYSTEM, COARSE_SYSTEM, SEARCH_SYSTEM):
+        assert DEADLINE_SENTENCE in system
+    # 질문별 힌트가 아니라 일반 규칙이다
+    for hint in ["건대입구", "강남", "08:40", "8시"]:
+        assert hint not in DEADLINE_SENTENCE
+
+
+def test_search_system_starts_with_system_and_does_not_say_to_pick_the_route():
+    assert SEARCH_SYSTEM.startswith(answerers.SYSTEM)
+    assert "경로는 직접 고른다" not in SEARCH_SYSTEM
+    assert "환승 시간은 역과 호선마다 다르다." in SEARCH_SYSTEM
+    assert "가장 빠른 경로" in SEARCH_SYSTEM
+    assert "180" not in SEARCH_SYSTEM
+
+
+def test_search_answerer_calls_shortest_route_and_answers(monkeypatch):
+    import openai
+
+    first = response([call_item("c1", "shortest_route",
+                                {"origin": "서울역", "dest": "잠실", "max_transfers": None})])
+    client = FakeClient([first, response(text=GOOD)])
+    monkeypatch.setattr(openai, "OpenAI", lambda: client)
+    answerers._llm_tools_search.cache_clear()
+    try:
+        ans = ANSWERERS["llm-tools-search"]("질문")
+    finally:
+        answerers._llm_tools_search.cache_clear()
+    assert ans.tool_calls == 1 and ans.parse_error is None and ans.seconds == 1740
+    assert [c["tools"] for c in client.calls] == [SEARCH_TOOLS, SEARCH_TOOLS]
+    assert [c["instructions"] for c in client.calls] == [SEARCH_SYSTEM, SEARCH_SYSTEM]
+    (out,) = tool_outputs(client.calls[1]["input"])
+    assert json.loads(out["output"])["seconds"] == 1298
+    assert ans.tool_log[0]["name"] == "shortest_route"
+    assert json.loads(ans.tool_log[0]["arguments"])["max_transfers"] is None
+
+
+def test_search_answerer_does_not_run_other_sets_tools():
+    bad = response([call_item("c1", "route_seconds", {"path": []})])
+    client = FakeClient([bad, response(text=GOOD)])
+    make_llm_tools(client, SEARCH_TOOLS, SEARCH_SYSTEM)("질문")
+    (out,) = tool_outputs(client.calls[1]["input"])
+    assert json.loads(out["output"]) == {"error": "모르는 도구: route_seconds"}
+
+
+def test_search_answerer_is_registered_and_accepted_by_cli():
+    from subway_route_agent.cli import LLM_ANSWERERS, TOOL_SETS
+
+    assert "llm-tools-search" in ANSWERERS and "llm-tools-search" in LLM_ANSWERERS
+    assert TOOL_SETS["llm-tools-search"] is SEARCH_TOOLS

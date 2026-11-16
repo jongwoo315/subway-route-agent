@@ -12,7 +12,8 @@ def test_stub_returns_empty_answer_for_any_text():
 
 
 def test_registry_has_stub_llm_and_both_tool_configurations():
-    assert list(ANSWERERS) == ["stub", "llm", "llm-tools", "llm-tools-coarse"]
+    assert list(ANSWERERS) == [
+        "stub", "llm", "llm-tools", "llm-tools-coarse", "llm-tools-search"]
 
 
 def test_questions_file_has_ten_questions_with_fields():
