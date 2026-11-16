@@ -1,465 +1,511 @@
 {
-  "schema_version": 2,
-  "diagram_type": "workflow",
-  "meta": {
-    "title": "subway-route-agent 전체 흐름",
-    "locale": "ko",
-    "quality_profile": "standard",
-    "output": "flow.html",
-    "repository": {
-      "url": "https://github.com/jongwoo315/subway-route-agent",
-      "provider": "github",
-      "revision": "9690d77c54e6ffbf333e3de1feeef24c0e619204"
-    }
+ "schema_version": 2,
+ "diagram_type": "workflow",
+ "meta": {
+  "title": "subway-route-agent 전체 흐름",
+  "locale": "ko",
+  "quality_profile": "standard",
+  "output": "flow.html",
+  "repository": {
+   "url": "https://github.com/jongwoo315/subway-route-agent",
+   "provider": "github",
+   "revision": "61b447a54c6fcc0ef36930f4f3a2201d7159035b"
+  }
+ },
+ "lanes": [
+  {
+   "id": "input",
+   "label": "입력"
   },
-  "lanes": [
+  {
+   "id": "truth",
+   "label": "정답 — 다익스트라"
+  },
+  {
+   "id": "answer",
+   "label": "답하는 쪽"
+  },
+  {
+   "id": "tool",
+   "label": "도구 구성"
+  },
+  {
+   "id": "grade",
+   "label": "채점·리포트"
+  }
+ ],
+ "mainPath": [
+  "csv",
+  "graph",
+  "route",
+  "grade",
+  "report"
+ ],
+ "nodes": [
+  {
+   "id": "csv",
+   "lane": "input",
+   "col": 0,
+   "type": "database",
+   "label": "역간 소요시간 CSV",
+   "sublabel": "1~8호선 279행",
+   "tag": "그대로",
+   "sources": [
     {
-      "id": "input",
-      "label": "입력"
-    },
-    {
-      "id": "truth",
-      "label": "정답 — 다익스트라"
-    },
-    {
-      "id": "answer",
-      "label": "답하는 쪽"
-    },
-    {
-      "id": "tool",
-      "label": "도구 셋 — 정보만 준다"
-    },
-    {
-      "id": "grade",
-      "label": "채점·리포트"
+     "path": "src/subway_route_agent/data.py",
+     "line": 21,
+     "label": "load_rows"
     }
-  ],
-  "mainPath": [
-    "csv",
-    "graph",
-    "route",
-    "grade",
-    "report"
-  ],
-  "nodes": [
+   ]
+  },
+  {
+   "id": "questions",
+   "lane": "input",
+   "col": 1,
+   "type": "database",
+   "label": "questions.json",
+   "sublabel": "질문 10개",
+   "tag": "그대로",
+   "sources": [
     {
-      "id": "csv",
-      "lane": "input",
-      "col": 0,
-      "type": "database",
-      "label": "역간 소요시간 CSV",
-      "sublabel": "1~8호선 279행",
-      "tag": "그대로",
-      "sources": [
-        {
-          "path": "src/subway_route_agent/data.py",
-          "line": 21,
-          "label": "load_rows"
-        }
-      ]
-    },
-    {
-      "id": "questions",
-      "lane": "input",
-      "col": 1,
-      "type": "database",
-      "label": "questions.json",
-      "sublabel": "질문 10개",
-      "tag": "그대로",
-      "sources": [
-        {
-          "path": "data/questions.json",
-          "line": 1
-        }
-      ]
-    },
-    {
-      "id": "graph",
-      "lane": "truth",
-      "col": 1,
-      "type": "backend",
-      "label": "build_graph",
-      "sublabel": "환승 = 데이터 값",
-      "tag": "그대로",
-      "sources": [
-        {
-          "path": "src/subway_route_agent/graph.py",
-          "line": 27,
-          "label": "build_graph"
-        }
-      ]
-    },
-    {
-      "id": "route",
-      "lane": "truth",
-      "col": 2,
-      "type": "backend",
-      "label": "shortest",
-      "sublabel": "시한을 못 맞추면 정답 없음",
-      "tag": "그대로",
-      "sources": [
-        {
-          "path": "src/subway_route_agent/cli.py",
-          "line": 32,
-          "label": "truth_for"
-        },
-        {
-          "path": "src/subway_route_agent/route.py",
-          "line": 14,
-          "label": "shortest"
-        }
-      ]
-    },
-    {
-      "id": "stub",
-      "lane": "answer",
-      "col": 2,
-      "type": "frontend",
-      "label": "stub",
-      "sublabel": "빈 답. 기본값",
-      "tag": "그대로",
-      "sources": [
-        {
-          "path": "src/subway_route_agent/answerers.py",
-          "line": 21
-        }
-      ]
-    },
-    {
-      "id": "grade",
-      "lane": "grade",
-      "col": 3,
-      "type": "security",
-      "label": "grade",
-      "sublabel": "[바뀜] 「길 없음」 답은 정답 없음 질문에서 맞음",
-      "tag": "조건 바뀜",
-      "sources": [
-        {
-          "path": "src/subway_route_agent/grade.py",
-          "line": 87
-        },
-        {
-          "path": "src/subway_route_agent/grade.py",
-          "line": 53,
-          "label": "fill_path"
-        }
-      ]
-    },
-    {
-      "id": "report",
-      "lane": "grade",
-      "col": 4,
-      "type": "backend",
-      "label": "리포트",
-      "sublabel": "답하는 쪽 하나일 때",
-      "tag": "그대로",
-      "sources": [
-        {
-          "path": "src/subway_route_agent/report.py",
-          "line": 67,
-          "label": "render"
-        }
-      ]
-    },
-    {
-      "id": "llm",
-      "lane": "answer",
-      "col": 3,
-      "type": "frontend",
-      "label": "llm — LLM 혼자",
-      "sublabel": "[바뀜] 「길 없음」으로도 답할 수 있다",
-      "tag": "조건 바뀜",
-      "sources": [
-        {
-          "path": "src/subway_route_agent/answerers.py",
-          "line": 93,
-          "label": "make_llm"
-        },
-        {
-          "path": "src/subway_route_agent/answerers.py",
-          "line": 43,
-          "label": "SCHEMA"
-        }
-      ]
-    },
-    {
-      "id": "check",
-      "lane": "input",
-      "col": 2,
-      "type": "security",
-      "label": "역 검사",
-      "sublabel": "그래프에 없는 역이면 exit 2",
-      "tag": "그대로",
-      "sources": [
-        {
-          "path": "src/subway_route_agent/cli.py",
-          "line": 81
-        }
-      ]
-    },
-    {
-      "id": "hand",
-      "lane": "truth",
-      "col": 3,
-      "type": "database",
-      "label": "직접 계산하는 테스트",
-      "sublabel": "환승 CSV도 더한다",
-      "tag": "그대로",
-      "sources": [
-        {
-          "path": "tests/test_route.py",
-          "line": 63,
-          "label": "_csv_seconds"
-        }
-      ]
-    },
-    {
-      "id": "llmt",
-      "lane": "answer",
-      "col": 4,
-      "type": "frontend",
-      "label": "llm-tools — 잘게 나눈 도구",
-      "sublabel": "[바뀜] 도구 4개를 받는다",
-      "tag": "조건 바뀜",
-      "sources": [
-        {
-          "path": "src/subway_route_agent/answerers.py",
-          "line": 129,
-          "label": "TOOLS_SYSTEM"
-        },
-        {
-          "path": "src/subway_route_agent/answerers.py",
-          "line": 135,
-          "label": "make_llm_tools"
-        }
-      ]
-    },
-    {
-      "id": "tools",
-      "lane": "tool",
-      "col": 4,
-      "type": "backend",
-      "label": "잘게 나눈 도구 4개",
-      "sublabel": "[바뀜] + 환승 시간 도구 · 본선·지선 나눔",
-      "tag": "조건 바뀜",
-      "sources": [
-        {
-          "path": "src/subway_route_agent/tools.py",
-          "line": 169,
-          "label": "FINE_TOOLS"
-        },
-        {
-          "path": "src/subway_route_agent/tools.py",
-          "line": 88,
-          "label": "transfer_seconds"
-        },
-        {
-          "path": "src/subway_route_agent/tools.py",
-          "line": 38,
-          "label": "line_stations"
-        }
-      ]
-    },
-    {
-      "id": "compare",
-      "lane": "grade",
-      "col": 5,
-      "type": "security",
-      "label": "비교 리포트",
-      "sublabel": "[바뀜] 회차별 지표·평균 차이",
-      "tag": "조건 바뀜",
-      "sources": [
-        {
-          "path": "src/subway_route_agent/report.py",
-          "line": 194,
-          "label": "render_compare"
-        },
-        {
-          "path": "src/subway_route_agent/report.py",
-          "line": 177,
-          "label": "_diff_lines"
-        }
-      ]
-    },
-    {
-      "id": "tcsv",
-      "lane": "truth",
-      "col": 0,
-      "type": "database",
-      "label": "환승역 CSV",
-      "sublabel": "환승 시간 데이터",
-      "tag": "그대로",
-      "sources": [
-        {
-          "path": "src/subway_route_agent/data.py",
-          "line": 31,
-          "label": "load_transfers"
-        }
-      ]
-    },
-    {
-      "id": "llmc",
-      "lane": "answer",
-      "col": 5,
-      "type": "frontend",
-      "label": "llm-tools-coarse",
-      "sublabel": "[새로] 크게 묶은 도구",
-      "tag": "새로 생김",
-      "sources": [
-        {
-          "path": "src/subway_route_agent/answerers.py",
-          "line": 132,
-          "label": "COARSE_SYSTEM"
-        },
-        {
-          "path": "src/subway_route_agent/answerers.py",
-          "line": 212
-        }
-      ]
-    },
-    {
-      "id": "rsec",
-      "lane": "tool",
-      "col": 5,
-      "type": "backend",
-      "label": "route_seconds 1개",
-      "sublabel": "[새로] 경로 → 전체 소요 시간 또는 오류",
-      "tag": "새로 생김",
-      "sources": [
-        {
-          "path": "src/subway_route_agent/tools.py",
-          "line": 112,
-          "label": "route_seconds"
-        },
-        {
-          "path": "src/subway_route_agent/tools.py",
-          "line": 199,
-          "label": "COARSE_TOOLS"
-        }
-      ]
+     "path": "data/questions.json",
+     "line": 1
     }
-  ],
-  "edges": [
+   ]
+  },
+  {
+   "id": "graph",
+   "lane": "truth",
+   "col": 1,
+   "type": "backend",
+   "label": "build_graph",
+   "sublabel": "환승 = 데이터 값",
+   "tag": "그대로",
+   "sources": [
     {
-      "id": "f1",
-      "from": "csv",
-      "to": "graph"
-    },
-    {
-      "id": "f2",
-      "from": "graph",
-      "to": "route"
-    },
-    {
-      "id": "f5",
-      "from": "route",
-      "to": "grade",
-      "label": "정답"
-    },
-    {
-      "id": "f6",
-      "from": "stub",
-      "to": "grade",
-      "label": "답"
-    },
-    {
-      "id": "f7",
-      "from": "grade",
-      "to": "report"
-    },
-    {
-      "id": "f9",
-      "from": "llm",
-      "to": "grade",
-      "label": "답"
-    },
-    {
-      "id": "g1",
-      "from": "questions",
-      "to": "check"
-    },
-    {
-      "id": "g2",
-      "from": "check",
-      "to": "route",
-      "label": "출발·도착·조건"
-    },
-    {
-      "id": "g3",
-      "from": "check",
-      "to": "stub",
-      "label": "문장만"
-    },
-    {
-      "id": "g4",
-      "from": "check",
-      "to": "llm",
-      "label": "문장만 (--answerer llm)"
-    },
-    {
-      "id": "g5",
-      "from": "route",
-      "to": "hand",
-      "label": "테스트에서 비교"
-    },
-    {
-      "id": "h1",
-      "from": "check",
-      "to": "llmt",
-      "label": "문장만"
-    },
-    {
-      "id": "h2",
-      "from": "llmt",
-      "to": "tools",
-      "label": "도구 호출 ↔ 결과"
-    },
-    {
-      "id": "h4",
-      "from": "llmt",
-      "to": "grade",
-      "label": "답"
-    },
-    {
-      "id": "h5",
-      "from": "report",
-      "to": "compare",
-      "label": "둘 이상 · 회차마다"
-    },
-    {
-      "id": "i1",
-      "from": "tcsv",
-      "to": "graph",
-      "label": "환승 시간"
-    },
-    {
-      "id": "j1",
-      "from": "check",
-      "to": "llmc",
-      "label": "문장만"
-    },
-    {
-      "id": "j2",
-      "from": "llmc",
-      "to": "rsec",
-      "label": "경로 ↔ 소요 시간"
-    },
-    {
-      "id": "j3",
-      "from": "llmc",
-      "to": "grade",
-      "label": "답"
+     "path": "src/subway_route_agent/graph.py",
+     "line": 27,
+     "label": "build_graph"
     }
-  ],
-  "cards": [
+   ]
+  },
+  {
+   "id": "route",
+   "lane": "truth",
+   "col": 2,
+   "type": "backend",
+   "label": "shortest",
+   "sublabel": "시한을 못 맞추면 정답 없음",
+   "tag": "그대로",
+   "sources": [
     {
-      "dot": "cyan",
-      "title": "읽는 법",
-      "items": [
-        "[새로]·[바뀜]은 PR #6(main) 대비 PR #7이 바꾼 단계다. 반려 뒤 재작업분도 같이 들어 있다",
-        "재작업이 바꾼 곳: 노선 조회(본선·지선), route_seconds 설명·오류, 「길 없음」 답과 채점, 비교 리포트 평균 차이",
-        "route_seconds는 채점과 같은 방법으로 답 경로의 시간을 잰다. 경로는 돌려주지 않는다"
-      ]
+     "path": "src/subway_route_agent/cli.py",
+     "line": 32,
+     "label": "truth_for"
+    },
+    {
+     "path": "src/subway_route_agent/route.py",
+     "line": 14,
+     "label": "shortest"
     }
-  ]
+   ]
+  },
+  {
+   "id": "stub",
+   "lane": "answer",
+   "col": 2,
+   "type": "frontend",
+   "label": "stub",
+   "sublabel": "빈 답. 기본값",
+   "tag": "그대로",
+   "sources": [
+    {
+     "path": "src/subway_route_agent/answerers.py",
+     "line": 21
+    }
+   ]
+  },
+  {
+   "id": "grade",
+   "lane": "grade",
+   "col": 3,
+   "type": "security",
+   "label": "grade",
+   "sublabel": "「길 없음」 답은 정답 없음 질문에서 맞음",
+   "tag": "그대로",
+   "sources": [
+    {
+     "path": "src/subway_route_agent/grade.py",
+     "line": 87
+    },
+    {
+     "path": "src/subway_route_agent/grade.py",
+     "line": 53,
+     "label": "fill_path"
+    }
+   ]
+  },
+  {
+   "id": "report",
+   "lane": "grade",
+   "col": 4,
+   "type": "backend",
+   "label": "리포트",
+   "sublabel": "답하는 쪽 하나일 때",
+   "tag": "그대로",
+   "sources": [
+    {
+     "path": "src/subway_route_agent/report.py",
+     "line": 67,
+     "label": "render"
+    }
+   ]
+  },
+  {
+   "id": "llm",
+   "lane": "answer",
+   "col": 3,
+   "type": "frontend",
+   "label": "llm — LLM 혼자",
+   "sublabel": "[바뀜] 지시문에 시한 비교 문장",
+   "tag": "조건 바뀜",
+   "sources": [
+    {
+     "path": "src/subway_route_agent/answerers.py",
+     "line": 33,
+     "label": "SYSTEM"
+    }
+   ]
+  },
+  {
+   "id": "check",
+   "lane": "input",
+   "col": 2,
+   "type": "security",
+   "label": "역 검사",
+   "sublabel": "그래프에 없는 역이면 exit 2",
+   "tag": "그대로",
+   "sources": [
+    {
+     "path": "src/subway_route_agent/cli.py",
+     "line": 81
+    }
+   ]
+  },
+  {
+   "id": "hand",
+   "lane": "truth",
+   "col": 3,
+   "type": "database",
+   "label": "직접 계산하는 테스트",
+   "sublabel": "환승 CSV도 더한다",
+   "tag": "그대로",
+   "sources": [
+    {
+     "path": "tests/test_route.py",
+     "line": 63,
+     "label": "_csv_seconds"
+    }
+   ]
+  },
+  {
+   "id": "llmt",
+   "lane": "answer",
+   "col": 4,
+   "type": "frontend",
+   "label": "llm-tools — 잘게 나눈 도구",
+   "sublabel": "[바뀜] 지시문에 시한 비교 문장",
+   "tag": "조건 바뀜",
+   "sources": [
+    {
+     "path": "src/subway_route_agent/answerers.py",
+     "line": 132,
+     "label": "TOOLS_SYSTEM"
+    },
+    {
+     "path": "src/subway_route_agent/answerers.py",
+     "line": 143,
+     "label": "make_llm_tools"
+    }
+   ]
+  },
+  {
+   "id": "tools",
+   "lane": "tool",
+   "col": 4,
+   "type": "backend",
+   "label": "잘게 나눈 도구 4개",
+   "sublabel": "+ 환승 시간 도구 · 본선·지선 나눔",
+   "tag": "그대로",
+   "sources": [
+    {
+     "path": "src/subway_route_agent/tools.py",
+     "line": 186,
+     "label": "FINE_TOOLS"
+    }
+   ]
+  },
+  {
+   "id": "compare",
+   "lane": "grade",
+   "col": 5,
+   "type": "security",
+   "label": "비교 리포트",
+   "sublabel": "[바뀜] 답하는 쪽 셋이면 짝마다 평균 차이",
+   "tag": "조건 바뀜",
+   "sources": [
+    {
+     "path": "src/subway_route_agent/report.py",
+     "line": 212,
+     "label": "render_compare"
+    },
+    {
+     "path": "src/subway_route_agent/report.py",
+     "line": 182,
+     "label": "_diff_lines"
+    }
+   ]
+  },
+  {
+   "id": "tcsv",
+   "lane": "truth",
+   "col": 0,
+   "type": "database",
+   "label": "환승역 CSV",
+   "sublabel": "환승 시간 데이터",
+   "tag": "그대로",
+   "sources": [
+    {
+     "path": "src/subway_route_agent/data.py",
+     "line": 31,
+     "label": "load_transfers"
+    }
+   ]
+  },
+  {
+   "id": "llmc",
+   "lane": "answer",
+   "col": 5,
+   "type": "frontend",
+   "label": "llm-tools-coarse",
+   "sublabel": "[바뀜] 지시문에 시한 비교 문장",
+   "tag": "조건 바뀜",
+   "sources": [
+    {
+     "path": "src/subway_route_agent/answerers.py",
+     "line": 135,
+     "label": "COARSE_SYSTEM"
+    }
+   ]
+  },
+  {
+   "id": "rsec",
+   "lane": "tool",
+   "col": 5,
+   "type": "backend",
+   "label": "route_seconds 1개",
+   "sublabel": "경로 → 전체 소요 시간 또는 오류",
+   "tag": "그대로",
+   "sources": [
+    {
+     "path": "src/subway_route_agent/tools.py",
+     "line": 116,
+     "label": "route_seconds"
+    },
+    {
+     "path": "src/subway_route_agent/tools.py",
+     "line": 216,
+     "label": "COARSE_TOOLS"
+    }
+   ]
+  },
+  {
+   "id": "llms",
+   "lane": "answer",
+   "col": 1,
+   "type": "frontend",
+   "label": "llm-tools-search",
+   "sublabel": "[새로] 경로 탐색 도구",
+   "tag": "새로 생김",
+   "sources": [
+    {
+     "path": "src/subway_route_agent/answerers.py",
+     "line": 137,
+     "label": "SEARCH_SYSTEM"
+    },
+    {
+     "path": "src/subway_route_agent/answerers.py",
+     "line": 226
+    }
+   ]
+  },
+  {
+   "id": "stool",
+   "lane": "tool",
+   "col": 1,
+   "type": "backend",
+   "label": "find_station + shortest_route",
+   "sublabel": "[새로] 출발·도착·환승 상한 → 가장 빠른 경로",
+   "tag": "새로 생김",
+   "sources": [
+    {
+     "path": "src/subway_route_agent/tools.py",
+     "line": 143,
+     "label": "shortest_route"
+    },
+    {
+     "path": "src/subway_route_agent/tools.py",
+     "line": 229,
+     "label": "SEARCH_TOOLS"
+    }
+   ]
+  }
+ ],
+ "edges": [
+  {
+   "id": "f1",
+   "from": "csv",
+   "to": "graph"
+  },
+  {
+   "id": "f2",
+   "from": "graph",
+   "to": "route"
+  },
+  {
+   "id": "f5",
+   "from": "route",
+   "to": "grade",
+   "label": "정답"
+  },
+  {
+   "id": "f6",
+   "from": "stub",
+   "to": "grade",
+   "label": "답"
+  },
+  {
+   "id": "f7",
+   "from": "grade",
+   "to": "report"
+  },
+  {
+   "id": "f9",
+   "from": "llm",
+   "to": "grade",
+   "label": "답"
+  },
+  {
+   "id": "g1",
+   "from": "questions",
+   "to": "check"
+  },
+  {
+   "id": "g2",
+   "from": "check",
+   "to": "route",
+   "label": "출발·도착·조건"
+  },
+  {
+   "id": "g3",
+   "from": "check",
+   "to": "stub",
+   "label": "문장만"
+  },
+  {
+   "id": "g4",
+   "from": "check",
+   "to": "llm",
+   "label": "문장만 (--answerer llm)"
+  },
+  {
+   "id": "g5",
+   "from": "route",
+   "to": "hand",
+   "label": "테스트에서 비교"
+  },
+  {
+   "id": "h1",
+   "from": "check",
+   "to": "llmt",
+   "label": "문장만"
+  },
+  {
+   "id": "h2",
+   "from": "llmt",
+   "to": "tools",
+   "label": "도구 호출 ↔ 결과"
+  },
+  {
+   "id": "h4",
+   "from": "llmt",
+   "to": "grade",
+   "label": "답"
+  },
+  {
+   "id": "h5",
+   "from": "report",
+   "to": "compare",
+   "label": "둘 이상 · 회차마다"
+  },
+  {
+   "id": "i1",
+   "from": "tcsv",
+   "to": "graph",
+   "label": "환승 시간"
+  },
+  {
+   "id": "j1",
+   "from": "check",
+   "to": "llmc",
+   "label": "문장만"
+  },
+  {
+   "id": "j2",
+   "from": "llmc",
+   "to": "rsec",
+   "label": "경로 ↔ 소요 시간"
+  },
+  {
+   "id": "j3",
+   "from": "llmc",
+   "to": "grade",
+   "label": "답"
+  },
+  {
+   "id": "k1",
+   "from": "check",
+   "to": "llms",
+   "label": "문장만"
+  },
+  {
+   "id": "k2",
+   "from": "llms",
+   "to": "stool",
+   "label": "출발·도착·환승 상한 ↔ 경로"
+  },
+  {
+   "id": "k3",
+   "from": "llms",
+   "to": "grade",
+   "label": "답"
+  },
+  {
+   "id": "k4",
+   "from": "stool",
+   "to": "route",
+   "label": "같은 함수를 부른다"
+  }
+ ],
+ "cards": [
+  {
+   "dot": "cyan",
+   "title": "읽는 법",
+   "items": [
+    "[새로]·[바뀜]은 PR #7(main) 대비 이번 PR #8이 바꾼 단계다",
+    "경로 탐색 도구는 정답과 같은 route.shortest를 부른다. 경로를 고르는 일을 도구가 한다",
+    "시한 비교 문장은 공통 SYSTEM에 들어가 LLM 혼자와 세 도구 구성 모두에 걸린다"
+   ]
+  }
+ ]
 }
