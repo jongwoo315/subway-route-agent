@@ -799,3 +799,12 @@ def test_render_compare_without_search_has_no_search_note():
     r = [[_result("q1", True)]]
     text = render_compare("d.csv", {"llm-tools": r, "llm-tools-coarse": r}, {}, g)
     assert "다익스트라" not in text
+
+
+def test_render_compare_two_tool_sets_with_search_still_names_both_configs():
+    g = build_graph([Row(1, "A", 0), Row(1, "B", 60)])
+    r = [[_result("q1", True)]]
+    text = render_compare("d.csv", {"llm-tools": r, "llm-tools-search": r}, {}, g)
+    head = next(ln for ln in text.splitlines() if ln.startswith("- 도구 구성:"))
+    assert "llm-tools-search = find_station, shortest_route" in head
+    assert "한 문장만 다르다" not in head  # 검색 구성은 지시문 차이가 한 문장이 아니다

@@ -233,10 +233,10 @@ def render_compare(
         *([f"- {SEARCH_DIFF}"] if "llm-tools-search" in by_answerer else []),
     ]
     present = [a for a in TOOL_CONFIGS if a in by_answerer]
-    if all(a in by_answerer for a in TOOL_ANSWERERS) or len(present) > 2:
+    if len(present) >= 2:
         configs = " / ".join(
             f"{a} = {', '.join(t['name'] for t in TOOL_CONFIGS[a])}" for a in present)
-        same = "두 지시문은 도구 안내 한 문장만 다르다" if len(present) == 2 else (
+        same = "두 지시문은 도구 안내 한 문장만 다르다" if present == list(TOOL_ANSWERERS) else (
             "지시문은 도구 안내 문장이 구성마다 다르다")
         lines.append(f"- 도구 구성: {configs}. {same}")
     if "llm-tools-coarse" in by_answerer:
